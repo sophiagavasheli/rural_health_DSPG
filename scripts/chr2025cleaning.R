@@ -26,3 +26,5 @@ select_chr <- chr %>%
 
 #write to csv
 write.csv(select_chr, "cleaned_data/cleanCHR25.csv", row.names = FALSE)
+
+# you're doing great
