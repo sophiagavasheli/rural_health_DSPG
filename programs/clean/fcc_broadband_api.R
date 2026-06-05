@@ -1,3 +1,6 @@
+# use fcc api to download 2025 broadband data
+# Sophia
+
 library(httr2)
 library(jsonlite)
 library(dplyr)
