@@ -3,8 +3,9 @@ library(shiny)
 library(shinythemes)
 library(shinyjs)
 library(tidyverse)
+library(here)
 
-chr <- read.csv("../cleaned_data/cleanCHR25.csv")
+chr <- read.csv(here("data", "outcome", "CHR", "cleanCHR25.csv"))
 
 
 #server
