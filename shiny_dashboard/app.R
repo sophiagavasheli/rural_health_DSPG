@@ -4,12 +4,10 @@ library(shinythemes)
 library(shinyjs)
 library(tidyverse)
 library(bslib)
-library(here)
 
+#all final data files must be in the shiny_dashboard directory
 
 #UI
-
-# navbar
 ui <- navbarPage("DSPG",
   
   tabPanel(
@@ -69,8 +67,7 @@ ui <- navbarPage("DSPG",
   
 ) #end ui
 
-chr <- read.csv(here("data", "outcome", "CHR", "cleanCHR25.csv"))
-
+chr <- read.csv("cleanCHR25.csv")
 
 #server
 server <- function(input, output) {

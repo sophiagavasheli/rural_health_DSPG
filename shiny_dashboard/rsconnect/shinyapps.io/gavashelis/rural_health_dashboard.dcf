@@ -1,0 +1,12 @@
+name: rural_health_dashboard
+title: rural_health_dashboard
+username: gavashelis
+account: gavashelis
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17473269
+bundleId: 12088886
+url: https://gavashelis.shinyapps.io/rural_health_dashboard/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
