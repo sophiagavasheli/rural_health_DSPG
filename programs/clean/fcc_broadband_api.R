@@ -1,6 +1,7 @@
 library(httr2)
 library(jsonlite)
 library(dplyr)
+library(here)
 
 #setup
 user = "sopo.gavasheli11@gmail.com"
@@ -48,16 +49,22 @@ resp <- request(fixed_link) |>
     username = user,
     hash_value = api_key
   ) |>
-  req_perform(path = "raw_data/fixed_broadband.zip")
+  req_perform(path = here("data", "source", "CHR", "fixed_broadband.zip"))
 
 resp <- request(mobile_link) |>
   req_headers(
     username = user,
     hash_value = api_key
   ) |>
-  req_perform(path = "raw_data/mobile_broadband.zip")
+  req_perform(path = here("data", "source", "CHR", "mobile_broadband.zip"))
 
 #unzip
-unzip("raw_data/fixed_broadband.zip", exdir = "raw_data")
-unzip("raw_data/mobile_broadband.zip", exdir = "raw_data")
+unzip(
+  here("data", "source", "CHR","fixed_broadband.zip"),
+  exdir = here("data", "source", "CHR",)
+)
 
+unzip(
+  here("data", "source", "CHR", "mobile_broadband.zip"),
+  exdir = here("data", "source", "CHR",)
+)
