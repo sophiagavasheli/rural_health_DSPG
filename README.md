@@ -13,7 +13,7 @@ rural_health_DSPG/
 ├── program/
 │   └── clean/
 │   └── analysis/
-├── logs/
+├── shiny_dashboard/
 └── README.md
 
 ```
