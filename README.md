@@ -7,6 +7,8 @@ rural_health_DSPG/
 ├── data/
 │   ├── pre_source/
 │   ├── source/
+│   │     ├── CHR
+│   │     └── FCC
 │   └── outcome/
 ├── program/
 │   └── clean/
