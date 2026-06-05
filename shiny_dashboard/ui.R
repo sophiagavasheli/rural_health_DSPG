@@ -8,14 +8,11 @@ library(bslib)
 #UI
 
 # navbar
-ui <- navbarPage(
-  title = "Health and Infrastructure in Rural Virginia",
+ui <- navbarPage("DSPG",
   
   tabPanel(
-    "Overview",
+    "Overview", h3("Health and Infrastructure in Rural Virginia"),
     fluidPage(
-      textOutput(outputId = "greeting"),
-      plotOutput(outputId = 'normal_plot'),
       textOutput(outputId = 'welcome'),
       textInput(inputId = 'name', 
                 label = 'Enter your name',
@@ -26,10 +23,18 @@ ui <- navbarPage(
     )
   ),
   
+  tabPanel("Literature Review",
+    fluidRow(
+      column(4, p("hellofhbfashefmsn da")),
+      column(4, p("fjhqebfjqhewfblwefwe")),
+      column(4, p("fljebfmnsd fmnse fmnf me"))
+    )
+  ),
+  
   tabPanel(
     "Results",
     fluidPage(
-      textOutput(outputId = 'results')
+      h1("Results")
       # additional content
     )
   ), 
