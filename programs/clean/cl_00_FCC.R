@@ -3,7 +3,10 @@
 
 library(dplyr)
 library(tidyr)
+library(here)
+library(stringr)
 
+# from FCC BDC
 fixed = read.csv(here("data", "source", "FCC", "FCC_fixed_broadband_25.csv"))
 mobile = read.csv(here("data", "source", "FCC", "FCC_mobile_broadband_25.csv"))
 
@@ -38,5 +41,31 @@ clean_mobile <- mobile %>%
   rename(GEOID = geography_id)
 
 
-write.csv(clean_fixed, here("data", "outcome","FCC", "cleanFCC_fixed_broadband25.csv"))
-write.csv(clean_mobile, here("data", "outcome","FCC", "cleanFCC_mobile_broadband25.csv"))
+write.csv(clean_fixed, here("data", "outcome","FCC", "cleanFCC_BDC_fixed_broadband25.csv"))
+write.csv(clean_mobile, here("data", "outcome","FCC", "cleanFCC_BDC_mobile_broadband25.csv"))
+
+
+#from FCC form 477
+form = read.csv(here("data", "source", "FCC", "FCC_form_477_county_tiers2014_2025.csv"))
+
+# state name to state abbrev lookup table
+states = read.csv("states.csv")
+
+clean_form = form %>%
+  #convert to UTF characters
+  mutate(County_Name = iconv(County_Name, from = "",to = "UTF-8",sub = "")) %>% 
+  select(-c(State, County)) %>% 
+  #remove the word "County" from counties
+  mutate(County_Name = gsub(" County", "", County_Name)) %>% 
+  #convert FIPS to GEOID (add leading zeros)
+  mutate(FIPS = str_pad(FIPS, width = 5, side = "left", pad = "0")) %>% 
+  rename(GEOID = FIPS) %>% 
+  #convert state name to state abbreviation
+  left_join(states, by = c("State_Name" = "state_name")) %>%
+  rename(state = state_abbrev) %>% 
+  #all col names to lower case
+  rename_with(tolower) %>% 
+  rename(GEOID = geoid) %>% 
+  select(-c(state_name))
+  
+write.csv(clean_form, here("data", "outcome","FCC", "cleanFCC_form_477_2014_2025.csv"))
