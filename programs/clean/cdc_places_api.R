@@ -1,15 +1,27 @@
-# cleaning CDC dataa
+# loading/cleaning CDC PlACES data with api
 # Sophia
 
+library(CDCPLACES)
 library(dplyr)
-library(stringr)
-library(tidyr)
 library(here)
+library(purrr)
 
-data = read.csv(here("data", "source", "CDC_PLACES", "places2025.csv"))
+#list of all vars
+vars = get_dictionary()
 
-#change to character
-data$LocationID = as.character(data$LocationID)
+# get county data
+states = read.csv("states.csv")
+state_abbrevs <- states$state_abbrev
+
+dat <- map_dfr(
+  state_abbrevs,
+  ~ get_places(
+    geography = "county",
+    state = .x,
+    release = "2025",
+    geometry = FALSE
+  )
+)
 
 measures  = data %>% 
   distinct(Measure, MeasureId)
@@ -42,3 +54,6 @@ pivot23 <- pivot %>%
 
 pivot22 <- pivot %>% 
   filter(year == 2022)
+
+
+  
