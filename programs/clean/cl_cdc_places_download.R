@@ -1,4 +1,4 @@
-# cleaning CDC dataa
+# cleaning downloaded CDC data
 # Sophia
 
 library(dplyr)
