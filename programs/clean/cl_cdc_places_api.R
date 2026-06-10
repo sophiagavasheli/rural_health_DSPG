@@ -48,7 +48,7 @@ pivot23 <- pivot %>%
 pivot22 <- pivot %>% 
   filter(year == 2022)
 
-write.csv(pivot22, here("data", "outcome", "CDC_PLACES", "places2022.csv"))
-write.csv(pivot23, here("data", "outcome", "CDC_PLACES", "places2023.csv"))
+write.csv(pivot22, here("data", "outcome", "CDC_PLACES", "places2022.csv"), row.names = FALSE)
+write.csv(pivot23, here("data", "outcome", "CDC_PLACES", "places2023.csv"), row.names = FALSE)
 
   

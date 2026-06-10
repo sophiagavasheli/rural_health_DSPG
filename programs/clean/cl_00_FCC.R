@@ -41,8 +41,8 @@ clean_mobile <- mobile %>%
   rename(GEOID = geography_id)
 
 
-write.csv(clean_fixed, here("data", "outcome","FCC", "cleanFCC_BDC_fixed_broadband25.csv"))
-write.csv(clean_mobile, here("data", "outcome","FCC", "cleanFCC_BDC_mobile_broadband25.csv"))
+write.csv(clean_fixed, here("data", "outcome","FCC", "cleanFCC_BDC_fixed_broadband25.csv"), row.names = FALSE)
+write.csv(clean_mobile, here("data", "outcome","FCC", "cleanFCC_BDC_mobile_broadband25.csv"), row.names = FALSE)
 
 
 #from FCC form 477
@@ -68,4 +68,4 @@ clean_form = form %>%
   rename(GEOID = geoid) %>% 
   select(-c(state_name))
   
-write.csv(clean_form, here("data", "outcome","FCC", "cleanFCC_form_477_2014_2025.csv"))
+write.csv(clean_form, here("data", "outcome","FCC", "cleanFCC_form_477_2014_2025.csv"), row.names = FALSE)
