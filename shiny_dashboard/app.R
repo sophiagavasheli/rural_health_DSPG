@@ -17,7 +17,6 @@ ui <- navbarPage("DSPG",
       textInput(inputId = 'name', 
                 label = 'Enter your name',
                 value = 'Your name here'),
-      plotOutput(outputId = 'chr_plot')
       
       
     )
