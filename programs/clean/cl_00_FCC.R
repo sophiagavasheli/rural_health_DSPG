@@ -1,71 +1,73 @@
-# cleaning 2025 FCC broadband data
-#Sophia
+# use fcc api to download 2025 broadband data
+# Sophia
 
+library(httr2)
+library(jsonlite)
 library(dplyr)
-library(tidyr)
 library(here)
-library(stringr)
 
-# from FCC BDC
-fixed = read.csv(here("data", "source", "FCC", "FCC_fixed_broadband_25.csv"))
-mobile = read.csv(here("data", "source", "FCC", "FCC_mobile_broadband_25.csv"))
+#setup
+user = "sopo.gavasheli11@gmail.com"
+api_key = "z46IAqvZpVcY9ehkR3HSkaJgjjpCZ3tCbsdyyri1CHE="
 
-clean_fixed <- fixed %>% 
-  #keep counties
-  filter(geography_type =="County") %>% 
-  #extract state abbrevs
-  mutate(geography_desc_full = trimws(sub(".*,", "", geography_desc_full))) %>%
-  #rename
-  rename(state = geography_desc_full) %>% 
-  #remove the word "County" from counties
-  mutate(geography_desc = gsub(" County", "", geography_desc)) %>% 
-  rename(county = geography_desc) %>% 
-  # keep nontribal divisions
-  filter(area_data_type %in% c("Total", "Urban", "Rural")) %>% 
-  # use all technology
-  filter(technology == "Any Technology") %>% 
-  #drop unnecessary cols
-  select(-c(geography_type, technology)) %>% 
-  rename(GEOID = geography_id) #useful for joins later
-  
+#get list of available data dates
+resp <- request("https://bdc.fcc.gov/api/public/map/listAsOfDates") |>
+  req_headers(
+    username = user,
+    hash_value = api_key
+  ) |>
+  req_perform()
 
-clean_mobile <- mobile %>% 
-  #keep counties
-  filter(geography_type =="County") %>% 
-  #separate county and state
-  separate(geography_desc, into = c("county", "state"), sep = ", ") %>% 
-  #remove the word "County" from counties
-  mutate(county = gsub(" County", "", county)) %>% 
-  filter(area_data_type %in% c("Total", "Urban", "Rural")) %>% 
-  select(-c(geography_type)) %>% 
-  rename(GEOID = geography_id)
+result <- resp_body_json(resp)
+#convert to dataframe
+dates <- as.data.frame(bind_rows(result$data))
 
 
-write.csv(clean_fixed, here("data", "outcome","FCC", "cleanFCC_BDC_fixed_broadband25.csv"), row.names = FALSE)
-write.csv(clean_mobile, here("data", "outcome","FCC", "cleanFCC_BDC_mobile_broadband25.csv"), row.names = FALSE)
+#list of available data as of 2025-12-31 (most recent availability data)
+resp <- request("https://bdc.fcc.gov/api/public/map/downloads/listAvailabilityData/2025-12-31") |>
+  req_headers(
+    username = user,
+    hash_value = api_key
+  ) |>
+  req_perform()
+
+avail_result = resp_body_json(resp)
+avail_data <- as.data.frame(bind_rows(avail_result$data))
+
+#we want the summary datasets for all states (state == NA)
+avail_filter <-  avail_data %>% 
+  filter(category == "Summary", is.na(state_name))
+
+#we want the following datasets:
+#"bdc_us_fixed_broadband_summary_by_geography_D25_27may2026" 
+#"bdc_us_mobile_broadband_summary_by_geography_D25_27may2026"
+
+#pull out the file ids to get download links
+fixed_link = "https://bdc.fcc.gov/api/public/map/downloads/downloadFile/availability/1625951/1"
+mobile_link = "https://bdc.fcc.gov/api/public/map/downloads/downloadFile/availability/1625952/1"
 
 
-#from FCC form 477
-form = read.csv(here("data", "source", "FCC", "FCC_form_477_county_tiers2014_2025.csv"))
+resp <- request(fixed_link) |>
+  req_headers(
+    username = user,
+    hash_value = api_key
+  ) |>
+  req_perform(path = here("data", "source", "CHR", "fixed_broadband.zip"))
 
-# state name to state abbrev lookup table
-states = read.csv("states.csv")
+resp <- request(mobile_link) |>
+  req_headers(
+    username = user,
+    hash_value = api_key
+  ) |>
+  req_perform(path = here("data", "source", "CHR", "mobile_broadband.zip"))
 
-clean_form = form %>%
-  #convert to UTF characters
-  mutate(County_Name = iconv(County_Name, from = "",to = "UTF-8",sub = "")) %>% 
-  select(-c(State, County)) %>% 
-  #remove the word "County" from counties
-  mutate(County_Name = gsub(" County", "", County_Name)) %>% 
-  #convert FIPS to GEOID (add leading zeros)
-  mutate(FIPS = str_pad(FIPS, width = 5, side = "left", pad = "0")) %>% 
-  rename(GEOID = FIPS) %>% 
-  #convert state name to state abbreviation
-  left_join(states, by = c("State_Name" = "state_name")) %>%
-  rename(state = state_abbrev) %>% 
-  #all col names to lower case
-  rename_with(tolower) %>% 
-  rename(GEOID = geoid) %>% 
-  select(-c(state_name))
-  
-write.csv(clean_form, here("data", "outcome","FCC", "cleanFCC_form_477_2014_2025.csv"), row.names = FALSE)
+#unzip
+unzip(
+  here("data", "source", "CHR","fixed_broadband.zip"),
+  exdir = here("data", "source", "CHR",)
+)
+
+unzip(
+  here("data", "source", "CHR", "mobile_broadband.zip"),
+  exdir = here("data", "source", "CHR",)
+)
