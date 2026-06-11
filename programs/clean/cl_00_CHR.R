@@ -6,13 +6,14 @@ library(dplyr)
 library(purrr)
 library(tidyr)
 library(here)
+library(stringr)
 
 #all the measures available
 measures = list_chrr_measures() 
 states = read.csv("states.csv")
 
 want = c("Poor or Fair Health", "Poor Physical Health Days", "Poor Mental Health Days",
-        "HIV Prevalence", "Frequent Mental Distress", "Premature Death")
+        "HIV Prevalence", "Frequent Mental Distress", "Premature Death", "Uninsured")
 
 #get measures
 chr <- map_dfr(
