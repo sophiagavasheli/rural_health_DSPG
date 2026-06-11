@@ -3,6 +3,7 @@
 library(tidycensus)
 library(dplyr)
 
+
 #loading in all of the variables from the 2024 ACS5
 acs_vars24 <- load_variables(2024, 
                "acs5")
@@ -90,6 +91,7 @@ demographics <- population |>
   left_join(med_age, by = c("GEOID" = "GEOID", "NAME" = "NAME")) |> 
   left_join(education, by = c("GEOID" = "GEOID", "NAME" = "NAME"))
   
+write.csv(demographics,"~/Desktop/DSPG/project_work/acs_demographics.csv", row.names = FALSE)
   
   
   
