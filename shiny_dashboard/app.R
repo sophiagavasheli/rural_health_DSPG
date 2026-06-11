@@ -12,7 +12,7 @@ ui <- navbarPage("Health and Infrastructure",
                  header = tags$head(
                    tags$style(HTML("
       .navbar {
-        background-color: #edf2e9 !important;
+        background-color: #eeeeee !important;
       }
     "))
                  ),
@@ -54,33 +54,55 @@ ui <- navbarPage("Health and Infrastructure",
       # FCC
       div(
         style = "display:flex; align-items:center; margin-bottom:20px;",
-        img(
-          src = "fcc.png",
-          height = "150px",
-          width = "150px"
-        ),
+        img(src = "fcc.png",height = "150px", width = "150px"),
         div(
-          style = "margin-left:20px;",
-          h3("Federal Communications Commission (FCC)")
-        )
+          tags$a(
+            "Federal Communications Commission",
+            href = "https://www.fcc.gov/",
+            target_ = "_blank",
+            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p('"The Current Population Survey (CPS) is sponsored by both the U.S. Census Bureau and the U.S. Bureau of Labor Statistics (BLS), and is the primary source of labor force statistics for the population of the USA."- Taken from the CPS website.',
+          style = "font-size:14px; color:#333333; margin-top:5px;")
+      )
       ),
+      
+      hr(),
       
       # ACS
       div(
-        style = "display:flex; align-items:center; margin-bottom:20px;",
-        img(
-          src = "acs.png",
-          height = "75px",
-          width = "200px"
-        ),
+        style = "display: flex; align-items: flex-start; gap: 20px;",
+        img(src = "acs.png", height = "120px", style = "flex-shrink:0;"),
         div(
-          style = "margin-left:20px;",
-          h3("American Community Survey (ACS)")
+          tags$a(
+            "American Comunity Survey",
+            href = "https://www.cdc.gov/places/index.html",
+            target = "_blank",
+            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+          ),
+          p('"The Current Population Survey (CPS) is sponsored by both the U.S. Census Bureau and the U.S. Bureau of Labor Statistics (BLS), and is the primary source of labor force statistics for the population of the USA."- Taken from the CPS website.',
+            style = "font-size:14px; color:#333333; margin-top:5px;")
+        )
+      ),
+      
+      hr(),
+      
+      div(
+        style = "display: flex; align-items: flex-start; gap: 20px;",
+        img(src = "cdc_places.jpg", height = "100px", style = "flex-shrink:0;"),
+        div(
+          tags$a(
+            "CDC PLACES",
+            href = "https://www.cdc.gov/places/index.html",
+            target = "_blank",
+            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+          ),
+          p('"The Current Population Survey (CPS) is sponsored by both the U.S. Census Bureau and the U.S. Bureau of Labor Statistics (BLS), and is the primary source of labor force statistics for the population of the USA."- Taken from the CPS website.',
+            style = "font-size:14px; color:#333333; margin-top:5px;")
         )
       )
       
-    )
-  ), 
+  )), 
   
   tabPanel(
     "About Us", 
