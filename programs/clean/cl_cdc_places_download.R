@@ -11,7 +11,7 @@ data = read.csv(here("data", "source", "CDC_PLACES", "places2025.csv"))
 #change to character
 data$LocationID = as.character(data$LocationID)
 
-measures  = data %>% 
+measure  = data %>% 
   distinct(Measure, MeasureId)
 
 # data sourced from BRFSS and all data values are percentages

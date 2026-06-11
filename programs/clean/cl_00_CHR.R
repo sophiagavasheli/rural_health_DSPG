@@ -1,30 +1,70 @@
-#cleaning County Health rankings 2025 data
+# loading/cleaning CHR data with API
 # Sophia
 
-library(readxl)
-chr = read_excel("rawdata/chr2025.xlsx", 
-                 sheet = "Select Measure Data", #sheet with the data
-                 skip=1) #skip the first row
-
-#replace whitespace with underscore
-#replace % with Pct and # with Num
-colnames(chr) <- colnames(chr) |>
-  gsub("\\s+", "_", x = _) |>
-  gsub("%", "Pct", x = _) |>
-  gsub("#", "Num", x=_)
-
-#select useful columns and remove rows with state summaries
+library(countyhealthR)
 library(dplyr)
-select_chr <- chr %>%
-  select("FIPS", "State","County", "Deaths","Years_of_Potential_Life_Lost_Rate",
-         "Average_Number_of_Mentally_Unhealthy_Days", "Primary_Care_Physicians_Rate",
-         "Mental_Health_Provider_Rate","Dentist_Rate", "Preventable_Hospitalization_Rate",
-         "Pct_with_Annual_Mammogram", "Pct_Uninsured", "Pct_Households_with_Broadband_Access",
-         "Num_Completed_High_School") %>% 
-  filter(!is.na(County))
+library(purrr)
+library(tidyr)
+library(here)
+
+#all the measures available
+measures = list_chrr_measures() 
+states = read.csv("states.csv")
+
+want = c("Poor or Fair Health", "Poor Physical Health Days", "Poor Mental Health Days",
+        "HIV Prevalence", "Frequent Mental Distress", "Premature Death")
+
+#get measures
+chr <- map_dfr(
+  want,
+  ~ get_chrr_measure_data(
+    geography = "county",
+    measure = .x,
+    release_year = 2025,
+    verbose = TRUE
+  ) %>%
+    mutate(requested_measure = .x)
+)
+
+#see years of the data
+meta = map_df(
+  want,
+  ~get_chrr_measure_metadata(
+    measure = .x,
+    release_year = 2025
+  )
+)
+#all are from 2022
+
+#get 2022 Mental Health Providers
+mental = get_chrr_measure_data(geography = "county", measure = "Mental Health Providers",
+                            release_year = 2023)
 
 
-#write to csv
-write.csv(select_chr, "cleaned_data/cleanCHR25.csv", row.names = FALSE)
+mental_fix = mental %>% 
+  select(state_fips, county_fips, raw_value) %>% 
+  rename(mental_health_providers = raw_value)
 
-# you're doing great
+
+chr_fix = chr %>% 
+  select(state_fips, county_fips, raw_value, requested_measure) %>% 
+  mutate(requested_measure = tolower(requested_measure)) %>% 
+  mutate(requested_measure = gsub(" ", "_", requested_measure))
+
+chr_pivot = pivot_wider(chr_fix,
+  id_cols = c(state_fips, county_fips),
+  names_from = requested_measure,
+  values_from = raw_value
+)   
+
+final = chr_pivot %>% 
+  left_join(mental_fix, by= c("state_fips" = "state_fips", 
+                              "county_fips" = "county_fips")) %>% 
+  mutate(
+    state_fips = str_pad(as.character(state_fips), width = 2, pad = "0"),
+    county_fips = str_pad(as.character(county_fips), width = 3, pad = "0"),
+    GEOID = paste0(state_fips, county_fips)
+  ) %>% 
+  select(-c(state_fips, county_fips))
+
+write.csv(final, here("data", "outcome", "CHR", "chr2022.csv"), row.names = FALSE)
