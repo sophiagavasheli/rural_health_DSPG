@@ -77,7 +77,7 @@ clean_fcc <- function(folder){
   write.csv(
     clean_fixed,
     here(
-      "data", "outcome", "FCC",
+      "data", "outcome", "FCC_BDC",
       paste0("clean_FCC_BDC_fixed_broadband_", year, ".csv")
     ),
     row.names = FALSE
@@ -86,7 +86,7 @@ clean_fcc <- function(folder){
   write.csv(
     clean_mobile,
     here(
-      "data", "outcome", "FCC",
+      "data", "outcome", "FCC_BDC",
       paste0("clean_FCC_BDC_mobile_broadband_", year, ".csv")
     ),
     row.names = FALSE

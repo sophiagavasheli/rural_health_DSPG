@@ -27,3 +27,13 @@ clean_form = form %>%
   rename(GEOID = geoid) %>% 
   select(-c(state_name))
 
+years = 2014:2025
+
+for (yr in years) {
+  year_dat = clean_form %>% 
+    filter(year == yr) %>% 
+    select(-year)
+  
+  write.csv(year_dat, here("data", "outcome", "FCC_form477", 
+                           paste0("form477_", yr, ".csv")), row.names = FALSE)
+}
