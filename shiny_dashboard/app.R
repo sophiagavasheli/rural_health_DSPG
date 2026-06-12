@@ -4,8 +4,22 @@ library(shinythemes)
 library(shinyjs)
 library(tidyverse)
 library(bslib)
+library(leaflet)
+library(tigris)
+library(sf)
+library(dplyr)
 
 #all final data files must be in the shiny_dashboard directory
+
+va_localities <- tigris::counties(
+  state = "VA",
+  cb = TRUE,
+  class = "sf"
+)
+va_localities <- va_localities |>
+  mutate(
+    NAMELSAD = gsub(" city", " City", NAMELSAD)
+  )
 
 #UI
 ui <- navbarPage("Health and Infrastructure",
@@ -21,6 +35,7 @@ ui <- navbarPage("Health and Infrastructure",
            h1("Exploring the Impacts of Infrastructure on Health Outcomes in the US"),
     fluidPage(
       textOutput(outputId = 'welcome'),
+      leafletOutput("va_map", height = 600)
     )
   ),
   
@@ -154,13 +169,24 @@ Inhabitants of rural areas across the US are disproportionally impacted by healt
 
 
 #server
-server <- function(input, output)
+server <- function(input, output) {
   
   output$welcome<- renderText({
     paste0("Welcome to our 2026 DSPG Rural Health and Infrastructure project page!")
   })
-  
-  
+  output$va_map <- renderLeaflet({
+    
+    leaflet(data = va_localities) |> 
+      addProviderTiles("Esri.WorldTopoMap") |> 
+      addPolygons(
+      fillColor = "white",
+      color = "black",
+      weight = 1,
+      fillOpacity = 1,
+      label = ~NAMELSAD
+      )
+  })
+} 
   
   
 #end server
