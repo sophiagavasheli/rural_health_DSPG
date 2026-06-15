@@ -5,7 +5,7 @@ library(dplyr)
 library(stringr)
 library(tidyr)
 
-mort = read.csv(here("data", "source", "CDC_WONDER", "mortality2024.csv"))
+mort = read.csv(here("data", "source", "CDC_WONDER", "mortality2023.csv"))
 mort$County.Code = as.character(mort$County.Code)
 
 filtered = mort %>% 
@@ -31,4 +31,4 @@ pivot = pivot_wider(filtered,
   names_sep = "_"
 )
 
-write.csv(pivot, here("data", "outcome", "CDC_WONDER", "mortality_clean_2024.csv"), row.names = FALSE)
+write.csv(pivot, here("data", "outcome", "CDC_WONDER", "mortality_clean_2023.csv"), row.names = FALSE)

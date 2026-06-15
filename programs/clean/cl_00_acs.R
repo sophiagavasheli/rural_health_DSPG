@@ -10,11 +10,12 @@ library(here)
 
 yr = 2022
 
-dat22 = get_acs(geography = "county", variables = c(
+# named vector of variables used in get_acs()
+vars_used <- c(
   pop = "B01003_001",
   med_house_income = "B19013_001",
   
-  #race
+  # race
   white = "B03002_003",
   black = "B03002_004",
   native = "B03002_005",
@@ -22,8 +23,9 @@ dat22 = get_acs(geography = "county", variables = c(
   island = "B03002_007",
   other = "B03002_008",
   hisp_latino = "B03002_012",
+  race_tot = "B03002_001",
   
-  #sex and age
+  # sex and age
   male_total = "B01001_002",
   male_u5 = "B01001_003",
   male_5_9 = "B01001_004",
@@ -73,21 +75,43 @@ dat22 = get_acs(geography = "county", variables = c(
   female_80_84 = "B01001_048",
   female_85_plus = "B01001_049",
   
-  #educational attainment
+  # educational attainment
   no_school = "B15003_002",
   mid_school = "B15003_012",
-  high_school  = "B15003_017",
+  high_school = "B15003_017",
   ged = "B15003_018",
   associates = "B15003_021",
   bachelors = "B15003_022",
   masters = "B15003_023",
   doctorate = "B15003_025",
+  edu_tot = "B15003_001",
   
-  #means of transportation to work
+  # transportation
   drove_alone = "B08301_003",
-  public_transp = "B08301_010"
-), 
-output = "wide", year = yr, survey = "acs5")
+  public_transp = "B08301_010",
+  transp_tot = "B08301_001",
+  
+  # internet
+  internet_sub = "B28011_002",
+  internet_wo_sub = "B28011_007",
+  no_internet = "B28011_008",
+  internet_tot = "B28011_001"
+)
+
+# extract descriptions
+var_descriptions <- tibble(
+  variable_name = names(vars_used),
+  variable = unname(vars_used)
+) %>%
+  left_join(
+    acs_vars %>%
+      select(name, label),
+    by = c("variable" = "name")
+  ) %>% 
+  select(-variable)
+
+#get data
+dat22 = get_acs(geography = "county", variables = vars_used, output = "wide", year = yr, survey = "acs5")
 
 #manipulation
 states = read.csv("states.csv")
@@ -117,6 +141,45 @@ filtered <- dat22 %>%
       female_65_66 + female_67_69 + female_70_74 +
       female_75_79 + female_80_84 + female_85_plus
   ) %>% 
+  # convert counts to proportions
+  mutate(
+    # race
+    pct_white = white / race_tot,
+    pct_black = black / race_tot,
+    pct_native = native / race_tot,
+    pct_asian = asian / race_tot,
+    pct_island = island / race_tot,
+    pct_other = other / race_tot,
+    pct_hisp_latino = hisp_latino / race_tot,
+    
+    # sex
+    pct_male = male_total / pop,
+    pct_female = female_total / pop,
+    
+    # age groups
+    pct_under_18 = age_under_18 / pop,
+    pct_18_64 = age_18_64 / pop,
+    pct_65_plus = age_65_plus / pop,
+    
+    # education (population 25+)
+    pct_no_school = no_school / edu_tot,
+    pct_mid_school = mid_school / edu_tot,
+    pct_high_school = high_school / edu_tot,
+    pct_ged = ged / edu_tot,
+    pct_associates = associates / edu_tot,
+    pct_bachelors = bachelors / edu_tot,
+    pct_masters = masters / edu_tot,
+    pct_doctorate = doctorate / edu_tot,
+    
+    # transportation (workers 16+)
+    pct_drove_alone = drove_alone / transp_tot,
+    pct_public_transp = public_transp / transp_tot,
+    
+    # internet (households)
+    pct_internet_sub = internet_sub / internet_tot,
+    pct_internet_wo_sub = internet_wo_sub / internet_tot,
+    pct_no_internet = no_internet / internet_tot
+  ) %>%
   # remove smaller age categories (keep total female and male)
   select(
     -matches("^male_(?!total)", perl = TRUE),
@@ -127,4 +190,4 @@ filtered <- dat22 %>%
   left_join(states, by = c("state" = "state_name")) %>% 
   select(-state)
 
-write.csv(filtered, here("data", "outcome", "ACS", "acs2022.csv"), row.names = FALSE)
+write.csv(filtered, here("data", "outcome", "ACS", "clean_ACS_2022.csv"), row.names = FALSE)
