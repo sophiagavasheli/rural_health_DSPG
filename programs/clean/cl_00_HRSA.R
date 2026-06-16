@@ -14,11 +14,11 @@ dat24 = read.csv(here("data", "source", "HRSA", "AHRF2024.csv"))
 
 #select vars from 2025
 select25 = dat25 %>% 
-  select(fips_st_cnty,st_name_abbrev,cnty_name, hosp_23, hosp_22, lth_psych_23, lth_psych_22, hosp_adm_23, hosp_adm_22, hosp_beds_23, hosp_beds_22, md_nf_fed_23, md_nf_fed_22, do_nf_fed_activ_23, do_nf_fed_activ_22, stgh_ed_vists_23, stgh_ed_vists_22, stnglth_ed_vists_23, stnglth_ed_vists_22, popn_23, popn_22, lo_birth_wgt_3yr_avg_23, lo_birth_wgt_3yr_avg_22, suicide_deth_3yr_23, suicide_deth_3yr_22)
+  select(fips_st_cnty,st_name_abbrev,cnty_name, hosp_23, hosp_22, lth_psych_23, lth_psych_22, hosp_adm_23, hosp_adm_22, hosp_beds_23, hosp_beds_22, md_nf_fed_23, md_nf_fed_22, do_nf_fed_activ_23, do_nf_fed_activ_22, stgh_ed_vists_23, stgh_ed_vists_22, stnglth_ed_vists_23, stnglth_ed_vists_22, popn_23, popn_22, lo_birth_wgt_3yr_avg_23, lo_birth_wgt_3yr_avg_22, suicide_deth_3yr_23, suicide_deth_3yr_22, inf_mort_rate_5yr_lt1_avg_23, inf_mort_rate_5yr_lt1_avg_22, stgh_obstetrc_care_23, do_nf_obgyn_gen_23, do_nf_obgyn_gen_22, md_nf_obgyn_gen_23, md_nf_obgyn_gen_22)
 
 #select from 2024
 select24 = dat24 %>% 
-  select(fips_st_cnty, comn_mentl_hlth_ctr_23, comn_mentl_hlth_ctr_22, fedly_qualfd_hlth_ctr_23, fedly_qualfd_hlth_ctr_22)
+  select(fips_st_cnty, comn_mentl_hlth_ctr_23, comn_mentl_hlth_ctr_22, fedly_qualfd_hlth_ctr_23, fedly_qualfd_hlth_ctr_22, stgh_obstetrc_care_22)
 
 #join
 joined = left_join(select25, select24, by = c("fips_st_cnty" = "fips_st_cnty"))
@@ -49,5 +49,5 @@ final22 = filtered %>%
   filter(year == 2022) %>% 
   select(-year)
 
-write.csv(final23, here("data", "outcome", "HRSA", "hrsa23.csv"), row.names = FALSE)
-write.csv(final22, here("data", "outcome", "HRSA", "hrsa22.csv"), row.names = FALSE)
+write.csv(final23, here("data", "outcome", "HRSA", "clean_HRSA_2023.csv"), row.names = FALSE)
+write.csv(final22, here("data", "outcome", "HRSA", "clean_HRSA_2022.csv"), row.names = FALSE)
