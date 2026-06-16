@@ -99,16 +99,16 @@ vars_used <- c(
 )
 
 # extract descriptions
-var_descriptions <- tibble(
-  variable_name = names(vars_used),
-  variable = unname(vars_used)
-) %>%
-  left_join(
-    acs_vars %>%
-      select(name, label),
-    by = c("variable" = "name")
-  ) %>% 
-  select(-variable)
+# var_descriptions <- tibble(
+#   variable_name = names(vars_used),
+#   variable = unname(vars_used)
+# ) %>%
+#   left_join(
+#     acs_vars %>%
+#       select(name, label),
+#     by = c("variable" = "name")
+#   ) %>% 
+#   select(-variable)
 
 #get data
 dat22 = get_acs(geography = "county", variables = vars_used, output = "wide", year = yr, survey = "acs5")
@@ -188,6 +188,10 @@ filtered <- dat22 %>%
   separate(NAM, c("county", "state"), sep = ", ") %>% 
   mutate(county = gsub(" County", "", county)) %>% 
   left_join(states, by = c("state" = "state_name")) %>% 
-  select(-state)
+  select(-state) %>% 
+  select(
+    GEOID, county, state_abbrev, pop, med_house_income,
+    starts_with("pct_")
+  )
 
 write.csv(filtered, here("data", "outcome", "ACS", "clean_ACS_2022.csv"), row.names = FALSE)

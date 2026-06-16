@@ -14,7 +14,7 @@ dat24 = read.csv(here("data", "source", "HRSA", "AHRF2024.csv"))
 
 #select vars from 2025
 select25 = dat25 %>% 
-  select(fips_st_cnty,st_name_abbrev,cnty_name, hosp_23, hosp_22, lth_psych_23, lth_psych_22, hosp_adm_23, hosp_adm_22, hosp_beds_23, hosp_beds_22, md_nf_fed_23, md_nf_fed_22, do_nf_fed_activ_23, do_nf_fed_activ_22, stgh_ed_vists_23, stgh_ed_vists_22, stnglth_ed_vists_23, stnglth_ed_vists_22, popn_23, popn_22, lo_birth_wgt_3yr_avg_23, lo_birth_wgt_3yr_avg_22, suicide_deth_3yr_23, suicide_deth_3yr_22, inf_mort_rate_5yr_lt1_avg_23, inf_mort_rate_5yr_lt1_avg_22, stgh_obstetrc_care_23, do_nf_obgyn_gen_23, do_nf_obgyn_gen_22, md_nf_obgyn_gen_23, md_nf_obgyn_gen_22)
+  select(fips_st_cnty,st_name_abbrev,cnty_name, hosp_23, hosp_22, lth_psych_23, lth_psych_22, hosp_adm_23, hosp_adm_22, hosp_beds_23, hosp_beds_22, md_nf_fed_23, md_nf_fed_22, do_nf_fed_activ_23, do_nf_fed_activ_22, stgh_ed_vists_23, stgh_ed_vists_22, stnglth_ed_vists_23, stnglth_ed_vists_22, popn_23, popn_22, lo_birth_wgt_3yr_avg_23, lo_birth_wgt_3yr_avg_22, suicide_deth_3yr_23, suicide_deth_3yr_22, inf_mort_rate_5yr_lt1_avg_23, inf_mort_rate_5yr_lt1_avg_22, stgh_obstetrc_care_23, do_nf_obgyn_gen_23, do_nf_obgyn_gen_22, md_nf_obgyn_gen_23, md_nf_obgyn_gen_22, popn_fem_23, popn_fem_22, births_3yr_avg_23, births_3yr_avg_22)
 
 #select from 2024
 select24 = dat24 %>% 
@@ -38,16 +38,52 @@ long$fips_st_cnty = as.character(long$fips_st_cnty)
 filtered = long %>% 
   mutate(fips_st_cnty = str_pad(fips_st_cnty, width = 5, 
                                 side = "left", pad = "0")) %>% 
-  rename(GEOID = fips_st_cnty, state = st_name_abbrev, county = cnty_name)
+  rename(GEOID = fips_st_cnty, state = st_name_abbrev, county = cnty_name) %>% 
+  mutate(
+    hosp_per100k = (hosp / popn) * 100000,
+    lth_psych_per100k = (lth_psych / popn) * 100000,
+    hosp_adm_per100k = (hosp_adm / popn) * 100000,
+    hosp_beds_per1000 = (hosp_beds / popn) * 1000,
+    md_nf_fed_per100k = (md_nf_fed / popn) * 100000,
+    do_nf_fed_activ_per100k = (do_nf_fed_activ / popn) * 100000,
+    stgh_ed_vists_per100k = (stgh_ed_vists / popn) * 100000,
+    stnglth_ed_vists_per100k = (stnglth_ed_vists / popn) * 100000,
+    lo_birth_wgt_pct = (lo_birth_wgt_3yr_avg / births_3yr_avg) * 100,
+    suicide_deth_3yr_per100k = (suicide_deth_3yr / popn) * 100000,
+    stgh_obstetrc_care_per100k_fem = (stgh_obstetrc_care / popn_fem) * 100000,
+    do_nf_obgyn_gen_per100k_fem = (do_nf_obgyn_gen / popn_fem) * 100000,
+    md_nf_obgyn_gen_per100k_fem = (md_nf_obgyn_gen / popn_fem) * 100000,
+    comn_mentl_hlth_ctr_per100k = (comn_mentl_hlth_ctr / popn) * 100000,
+    fedly_qualfd_hlth_ctr_per100k = (fedly_qualfd_hlth_ctr / popn) * 100000
+  ) %>% 
+  select(
+    -hosp,
+    -lth_psych,
+    -hosp_adm,
+    -hosp_beds,
+    -md_nf_fed,
+    -do_nf_fed_activ,
+    -stgh_ed_vists,
+    -stnglth_ed_vists,
+    -lo_birth_wgt_3yr_avg,
+    -births_3yr_avg,
+    -suicide_deth_3yr,
+    -stgh_obstetrc_care,
+    -do_nf_obgyn_gen,
+    -md_nf_obgyn_gen,
+    -comn_mentl_hlth_ctr,
+    -fedly_qualfd_hlth_ctr,
+    -popn, -popn_fem
+  )
 
 #filter by year
 final23 = filtered %>% 
-  filter(year == 2023) %>% 
-  select(-year)
+  filter(year == 2023) 
+  
 
 final22 = filtered %>% 
-  filter(year == 2022) %>% 
-  select(-year)
+  filter(year == 2022)
+  
 
 write.csv(final23, here("data", "outcome", "HRSA", "clean_HRSA_2023.csv"), row.names = FALSE)
 write.csv(final22, here("data", "outcome", "HRSA", "clean_HRSA_2022.csv"), row.names = FALSE)
