@@ -14,7 +14,7 @@ library(tidyr)
 want <- c(
   "CASTHMA", "ARTHRITIS", "STROKE", "OBESITY", "VISION",
   "DISABILITY", "MOBILITY", "BINGE", "DEPRESSION",
-  "COPD", "CHD", "CHECKUP", "CANCER", "CSMOKING"
+  "COPD", "CHD", "CHECKUP", "CANCER", "CSMOKING", "ACCESS2"
 )
 
 # get county data (2025 release, 2023 data)

@@ -5,7 +5,10 @@ library(dplyr)
 library(stringr)
 library(tidyr)
 
-mort = read.csv(here("data", "source", "CDC_WONDER", "mortality2023.csv"))
+# cleaning the drug/alcohol grouped data
+mort = read.csv(here("data", "source", "CDC_WONDER", "mortality_drug_alc_2023.csv"), 
+na.strings = "Not Available")
+
 mort$County.Code = as.character(mort$County.Code)
 
 filtered = mort %>% 
@@ -31,4 +34,35 @@ pivot = pivot_wider(filtered,
   names_sep = "_"
 )
 
-write.csv(pivot, here("data", "outcome", "CDC_WONDER", "mortality_clean_2023.csv"), row.names = FALSE)
+# look at NA/supressed values
+na = pivot %>% 
+  summarise(
+    across(
+      everything(),
+      list(
+        n_na = ~sum(is.na(.)),
+        n_suppressed = ~sum(. == "Suppressed", na.rm = TRUE)
+      ),
+      .names = "{.col}_{.fn}"
+    )
+  )
+
+write.csv(pivot, here("data", "outcome", "CDC_WONDER", "clean_mortality_drug_alc_2023.csv"), row.names = FALSE)
+
+# cleaning all mortality
+all = read.csv(here("data", "source", "CDC_WONDER", "all_mortality_2023.csv"), 
+                na.strings = "Not Available")
+
+mort$County.Code = as.character(mort$County.Code)
+
+filtered_all = all %>% 
+  filter(Notes == "") %>% 
+  select(-c(Notes, Crude.Rate.Upper.95..Confidence.Interval, 
+            Crude.Rate.Lower.95..Confidence.Interval)) %>% 
+  separate(County, into = c("county", "state"), sep = ", ", fill = "right") %>% 
+  mutate(county = gsub(" County", "", county)) %>% 
+  mutate(County.Code = str_pad(County.Code, width = 5, side = "left", pad = "0")) %>% 
+  rename_with(tolower) %>% 
+  rename(GEOID = county.code, crude_rate = crude.rate)
+
+write.csv(filtered_all, here("data", "outcome", "CDC_WONDER", "clean_all_mortality_2023.csv"), row.names = FALSE)
