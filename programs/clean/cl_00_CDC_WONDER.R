@@ -6,8 +6,8 @@ library(stringr)
 library(tidyr)
 
 # cleaning the drug/alcohol grouped data
-mort = read.csv(here("data", "source", "CDC_WONDER", "mortality_drug_alc_2023.csv"), 
-na.strings = "Not Available")
+mort = read.csv(here("data", "source", "CDC_WONDER", "mortality_drug_alc_2022.csv"), 
+na.strings = c("Not Available", "Suppressed"))
 
 mort$County.Code = as.character(mort$County.Code)
 
@@ -47,11 +47,11 @@ na = pivot %>%
     )
   )
 
-write.csv(pivot, here("data", "outcome", "CDC_WONDER", "clean_mortality_drug_alc_2023.csv"), row.names = FALSE)
+write.csv(pivot, here("data", "outcome", "CDC_WONDER", "clean_mortality_drug_alc_2022.csv"), row.names = FALSE)
 
 # cleaning all mortality
-all = read.csv(here("data", "source", "CDC_WONDER", "all_mortality_2023.csv"), 
-                na.strings = "Not Available")
+all = read.csv(here("data", "source", "CDC_WONDER", "all_mortality_2022.csv"), 
+               na.strings = c("Not Available", "Suppressed"))
 
 mort$County.Code = as.character(mort$County.Code)
 
@@ -65,4 +65,4 @@ filtered_all = all %>%
   rename_with(tolower) %>% 
   rename(GEOID = county.code, crude_rate = crude.rate)
 
-write.csv(filtered_all, here("data", "outcome", "CDC_WONDER", "clean_all_mortality_2023.csv"), row.names = FALSE)
+write.csv(filtered_all, here("data", "outcome", "CDC_WONDER", "clean_all_mortality_2022.csv"), row.names = FALSE)

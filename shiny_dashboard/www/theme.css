@@ -1,0 +1,283 @@
+/* ==========================================
+   GLOBAL
+========================================== */
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: #f8faf8;
+  color: #2d3436;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ==========================================
+   NAVBAR
+========================================== */
+
+.navbar {
+  background-color: #1b4332 !important;
+  border: none;
+  border-radius: 0;
+  min-height: 60px;
+}
+
+.navbar-brand {
+  color: white !important;
+  font-size: 24px;
+  font-weight: 600;
+  padding-top: 20px;
+}
+
+.navbar-nav > li > a {
+  color: #e9f5ee !important;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* Hover tab */
+
+.navbar-nav > li > a:hover,
+.navbar-nav > li > a:focus {
+  background-color: #40916c !important;
+  color: white !important;
+}
+
+/* Active tab */
+
+.navbar-nav > .active > a,
+.navbar-nav > .active > a:hover,
+.navbar-nav > .active > a:focus {
+  background-color: #081c15 !important;
+  color: white !important;
+  font-weight: 600;
+  border-bottom: 4px solid #84af78;
+}
+
+/* ==========================================
+   HEADERS
+========================================== */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #1b4332;
+  font-weight: 500;
+}
+
+h1 {
+  border-bottom: 3px solid #2d6a4f;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+/* ==========================================
+   PANELS / SIDEBARS
+========================================== */
+
+.well,
+.panel {
+  background-color: white;
+  border: 1px solid #d8e2dc;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.panel-default {
+  border-color: #d8e2dc;
+}
+
+.panel-default > .panel-heading {
+  background-color: #2d6a4f;
+  color: white;
+  font-weight: 600;
+  border-radius: 8px 8px 0 0;
+}
+
+/* ==========================================
+   INPUTS
+========================================== */
+
+.form-control {
+  border-radius: 6px;
+  border: 1px solid #b7c9bd;
+}
+
+.form-control:focus {
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 0.2rem rgba(45,106,79,0.25);
+}
+
+/* ==========================================
+   BUTTONS
+========================================== */
+
+.btn-primary {
+  background-color: #2d6a4f;
+  border-color: #2d6a4f;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #1b4332;
+  border-color: #1b4332;
+}
+
+.btn-default:hover {
+  background-color: #eef5ef;
+}
+
+/* ==========================================
+   TABLES
+========================================== */
+
+.table {
+  background-color: white;
+}
+
+.table th {
+  background-color: #1b4332;
+  color: white;
+  border-color: #1b4332;
+}
+
+.table-striped > tbody > tr:nth-child(odd) {
+  background-color: #f2f7f3;
+}
+
+/* ==========================================
+   DATATABLES
+========================================== */
+
+.dataTables_wrapper .dataTables_filter input {
+  border-radius: 5px;
+  border: 1px solid #b7c9bd;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+  background: #2d6a4f !important;
+  color: white !important;
+  border: none !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background: #40916c !important;
+  color: white !important;
+}
+
+/* ==========================================
+   LEAFLET
+========================================== */
+
+.leaflet-container {
+  background: #eef5ef;
+}
+
+.info.legend {
+  background: white;
+  padding: 10px;
+  border-radius: 6px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.3);
+  line-height: 18px;
+}
+
+.legend-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+/* ==========================================
+   LINKS
+========================================== */
+
+a {
+  color: #2d6a4f;
+}
+
+a:hover {
+  color: #1b4332;
+  text-decoration: none;
+}
+
+/* ==========================================
+   VALUE BOXES
+========================================== */
+
+.value-box {
+  border-left: 5px solid #2d6a4f;
+}
+
+/* ==========================================
+   HR
+========================================== */
+
+hr {
+  border-top: 1px solid #d8e2dc;
+}
+
+/* ==========================================
+   FOOTER
+========================================== */
+
+.footer {
+  margin-top: 30px;
+  padding: 15px;
+  border-top: 1px solid #d8e2dc;
+  color: #6c757d;
+}
+
+/* ==========================================
+   SHINY NOTIFICATIONS
+========================================== */
+
+.shiny-notification {
+  border-left: 5px solid #2d6a4f;
+  border-radius: 6px;
+}
+
+/* Collapsible references box */
+
+.ref-box {
+  border: 1px solid #d8e2dc;
+  border-radius: 8px;
+  background: white;
+  padding: 8px;
+  margin-top: 10px;
+}
+
+/* Remove default browser marker */
+.ref-summary {
+  list-style: none;
+  cursor: pointer;
+  font-weight: 600;
+  color: #1b4332;
+}
+
+.ref-summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Custom arrow */
+.ref-summary::before {
+  content: "▶";
+  display: inline-block;
+  margin-right: 8px;
+  transition: transform 0.2s ease;
+  color: #2d6a4f;
+}
+
+/* Rotate when open */
+.ref-box[open] .ref-summary::before {
+  transform: rotate(90deg);
+}
+
+/* Reference content */
+.ref-content {
+  font-size: 11px;
+  max-height: 350px;
+  overflow-y: auto;
+  line-height: 1.4;
+  margin-top: 10px;
+}

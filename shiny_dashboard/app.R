@@ -1,44 +1,48 @@
-#libraries
+
+# libraries ---------------------------------------------------------------
 library(shiny)
 library(shinythemes)
 library(shinyjs)
-library(tidyverse)
 library(bslib)
 library(leaflet)
 library(tigris)
 library(sf)
 library(dplyr)
+library(viridis)
 
-#all final data files must be in the shiny_dashboard directory
+setwd("~/College/DSPG/rural_health_DSPG/shiny_dashboard")
 
-va_localities <- tigris::counties(
-  state = "VA",
-  cb = TRUE,
-  class = "sf"
-)
-va_localities <- va_localities |>
-  mutate(
-    NAMELSAD = gsub(" city", " City", NAMELSAD)
-  )
+# data loading, etc -------------------------------------------------------
+join22 = read.csv("join2022.csv")
+summ = read.csv("summary2022.csv")
+summ = summ %>% 
+  arrange(desc(Num_NAs))
 
-#UI
-ui <- navbarPage("Health and Infrastructure",
-                 header = tags$head(
-                   tags$style(HTML("
-      .navbar {
-        background-color: #eeeeee !important;
-      }
-    "))
-                 ),
-  
+# map
+options(tigris_use_cache = TRUE)
+
+counties_sf <- counties(cb = TRUE, year = 2022, class = "sf")
+
+counties_sf <- counties_sf %>%
+  mutate(GEOID = as.numeric(GEOID))
+
+map_data <- counties_sf %>%
+  left_join(join22, by = c("GEOID" = "GEOID"))
+
+# UI ----------------------------------------------------------------------
+ui <- navbarPage("Rural Health and Infrastructure",
+                 theme = "theme.css", #theming specified in css file
+                 
+# overview panel ----------------------------------------------------------
   tabPanel("Overview", 
            h1("Exploring the Impacts of Infrastructure on Health Outcomes in the US"),
     fluidPage(
-      textOutput(outputId = 'welcome'),
-      leafletOutput("va_map", height = 600)
+      
     )
   ),
   
+
+# lit review --------------------------------------------------------------
   tabPanel("Literature Review",
     fluidPage(
       h1("Review of the Literature"),
@@ -48,7 +52,7 @@ ui <- navbarPage("Health and Infrastructure",
              h2("Issues in Rural Health"),
              p("Rural populations face many challenges when accessing healthcare. The difficult terrain in rural regions, such as the mountains of Appalachia, makes it difficult to access transportation and increases drive times to health facilities (Donohoe et al., 2016). Financing healthcare is one of the biggest barriers, as health insurance can be very expensive. Furthermore, driving longer distances adds to financial expense in terms of fuel costs, lost income, and childcare costs (Kaboli et al., 2026). Limited internet availability can impede people’s use of telehealth and the ability to find up-to-date health information. Finally, the close-knit nature and self-sufficient attitude of many rural communities can discourage people from seeking medical care since they prefer to keep their health issues private and “power through” (Golembiewski et al., 2022). There is also a sense of stigma around seeking help for substance abuse and psychological disorders. Improving access to telemedicine is crucial to increase privacy and reduce stigma around seeking help (Golembiewski et al., 2022). All these challenges discourage many people in rural populations from getting medical care, so chronic conditions go unmanaged, and overall health outcomes for that population get worse."),
              h2("Health Outcomes"),
-             p("The studies we reviewed used many different indicators to assess health outcomes. Mortality outcomes include overall mortality (“Appalachia Then and Now,” 2015.; “Appalachian Diseases of Despair,” 2025; Mullens et al., 2024), premature deaths (Anderson et al., 2015), life expectancy (Basu et al., 2019), inpatient mortality (Gujral & Basu, 2019), and diseases of despair such as suicide and drug overdose (“Appalachian Diseases of Despair, 2025,” n.d.). Morbidity and chronic disease outcomes include diabetes prevalence (“Appalachia Then and Now,” 2015; Connect2Health FCC Task Force, 2019), cancer incidence (Hong et al., 2023; Zeng et al., 2015), cardiovascular disease (Basu et al., 2019; Hong et al., 2023; Zeng et al., 2015), Chronic Obstructive Pulmonary Disease (Basu et al., 2019; Gujral & Basu, 2019; Zeng et al., 2015), and obesity prevalence (“Appalachia Then and Now,” 2015). Other health outcomes include the number of poor physical health days (Anderson et al., 2015), poor mental health days (Anderson et al., 2015), low birth weight (Anderson et al., 2015), telemedicine usage rates (Cummins et al., 2025), visit completion rates (Haggerty et al., 2022), emergency room visits (Bailey et al., 2024), and missed appointments (Bailey et al., 2024; Haggerty et al., 2022)."),
+             p("The studies we reviewed used many different indicators to assess health outcomes. Mortality outcomes include overall mortality (“Appalachia Then and Now,” 2015.; “Appalachian Diseases of Despair,” 2025; Mullens et al., 2024), premature deaths (Anderson et al., 2015), life expectancy (Basu et al., 2019), inpatient mortality (Gujral & Basu, 2019), and diseases of despair such as suicide and drug overdose (“Appalachian Diseases of Despair, 2025,” 2015). Morbidity and chronic disease outcomes include diabetes prevalence (“Appalachia Then and Now,” 2015; Connect2Health FCC Task Force, 2019), cancer incidence (Hong et al., 2023; Zeng et al., 2015), cardiovascular disease (Basu et al., 2019; Hong et al., 2023; Zeng et al., 2015), Chronic Obstructive Pulmonary Disease (Basu et al., 2019; Gujral & Basu, 2019; Zeng et al., 2015), and obesity prevalence (“Appalachia Then and Now,” 2015). Other health outcomes include the number of poor physical health days (Anderson et al., 2015), poor mental health days (Anderson et al., 2015), low birth weight (Anderson et al., 2015), telemedicine usage rates (Cummins et al., 2025), visit completion rates (Haggerty et al., 2022), emergency room visits (Bailey et al., 2024), and missed appointments (Bailey et al., 2024; Haggerty et al., 2022)."),
              h2("Broadband and Health"),
              p("Broadband access is a crucial element to nearly every aspect of life, and it has become increasingly prominent in the healthcare field over time. As of 2019, broadband connectivity has been dubbed a “super determinant of health” by the Federal Communication Commission (FCC, 2019). This identification builds on the existing concept of social determinants of health (SDOH), a concept commonly used in government work and the literature to describe the conditions in the environments where people live, learn, work, and socialize, particularly in the context of how they influence one’s health (Vrtikapa et al., 2025). The Federal Communication Commission proposes that broadband is not only a social determinant of health itself but also that other social determinants of health, like education and employment, are considerably and increasingly dependent on broadband (Connect2Health FCC Task Force, 2019). However, broadband penetration rates decrease as counties become more rural (Coleman Drake et al., 2019). As of 2024, the FCC has increased its broadband speed benchmark to download speeds of 100 megabits per second and upload speeds of 20 megabits per second (Federal Communications Commission, 2024). This standard is used when assessing if an area has access to broadband internet.")
 ),
@@ -66,21 +70,85 @@ Inhabitants of rural areas across the US are disproportionally impacted by healt
              h2("Limitations"),
              p("Limitations of existing studies include unreliability of some key data sources, lack of standard defining characteristics of rurality, lack of causal evidence, sampling parameters, and measurement of spatial access. One author writes that the FCC’s Form 477 is an unreliable map that leads to poor policy and funding (Ali et al., 2022). This is said to be due to the FCC’s data collection being by census block. Even if one building in a census block has access to a service provider, the whole block is considered served (Ali et al, 2022). There is also a considerable lack of consensus on what defines “rurality” in the literature, with some studies using USDA Rural-Urban Continuum Codes and others using ARC designations (Anderson et al., 2015; Appalachian Diseases of Despair, 2025; Golembiewski et al., 2022). Additionally, many studies use a cross-sectional design for their data analysis, which makes them unable to establish a causal relationship and instead find correlations (Anderson et al., 2015; Basu et al., 2019; Connect2Health FCC Task Force, 2019). Notably limiting, various studies include data samples from only one state or institution (Bailey et al., 2024; Basu et al., 2019; Haggerty et al, 2022). Finally, measurements of spatial access pose an issue, as many times using counties or other rigid geographical borders to conduct analysis results in inaccurate representations of patients’ realized travel times, which often include crossing borders in rural settings (Guagliardo, 2004; Donohoe et al., 2024). "),
              h2("Our Approach"),
-             p("In the research, not many studies have attempted to examine causal relationships between infrastructure and health outcome variables on a US-wide scale. This is exactly the gap we intend to fill. To be able to examine causal relationships, we aim to build a reproducible dataset with data from each US county examining various infrastructure measures and their impacts on health outcomes, using controls such as demographic information and rurality.")
+             p("In the research, not many studies have attempted to examine causal relationships between infrastructure and health outcome variables on a US-wide scale. This is exactly the gap we intend to fill. To be able to examine causal relationships, we aim to build a reproducible dataset with data from each US county examining various infrastructure measures and their impacts on health outcomes, using controls such as demographic information and rurality."),
+             tags$details(
+               class = "ref-box",
+               
+               tags$summary(
+                 class = "ref-summary",
+                 "References"
+               ),
+               
+               div(
+                 class = "ref-content",
+                 
+                 tags$ul(
+                   tags$li("Anderson TJ, Saman DM, Lipsky MS, Lutfiyya MN (2015). A Cross-Sectional Study on Health Differences Between Rural and Non-Rural U.S. Counties Using the County Health Rankings. BMC Health Services Research, 15(1), 441."),
+                   tags$li("Appalachian Regional Commission (2015). Appalachia Then and Now: Examining Changes to the Appalachian Region Since 1965."),
+                   tags$li("Appalachian Regional Commission (2025). Appalachian Diseases of Despair, 2025."),
+                   tags$li("Bailey J, Burchfield K, Redden J, et al. (2024). The Road to Access: Addressing Transportation Challenges in Rural Primary Care."),
+                   tags$li("Basu S, Berkowitz SA, Phillips RL, et al. (2019). Association of Primary Care Physician Supply With Population Mortality in the United States, 2005–2015."),
+                   tags$li("Bell N, Hung P, López-De Fede A, Adams SA (2023). Broadband Access Within Medically Underserved Areas and Its Implication for Telehealth Utilization."),
+                   tags$li("Bhowmik T, Tirtha SD, Iraganaboina NC, Eluru N (2021). A Comprehensive Analysis of COVID-19 Transmission and Mortality Rates at the County Level in the United States."),
+                   tags$li("Connect2Health FCC Task Force (2019). Broadband Connectivity: A 'Super' Determinant of Health."),
+                   tags$li("Cummins MR, Wong B, Wan N, et al. (2025). Social Vulnerability, Lower Broadband Internet Access, and Rurality Associated With Lower Telemedicine Use in U.S. Counties."),
+                   tags$li("Donohoe J, Marshall V, Tan X, et al. (2016). Spatial Access to Primary Care Providers in Appalachia: Evaluating Current Methodology."),
+                   tags$li("Drake C, Zhang Y, Chaiyachati KH, Polsky D (2019). The Limitations of Poor Broadband Internet Access for Telemedicine Use in Rural America."),
+                   tags$li("Federal Communications Commission (2024). FCC Increases Broadband Speed Benchmark."),
+                   tags$li("Ferriola N, Alvarado-Richter C, Acharya E, et al. (2025). The Impact of Transportation Barriers on Rural Cancer Patients: A Systematic Review."),
+                   tags$li("Golembiewski EH, Gravholt DL, Torres Roldan VD, et al. (2022). Rural Patient Experiences of Accessing Care for Chronic Conditions."),
+                   tags$li("Guagliardo MF (2004). Spatial Accessibility of Primary Care: Concepts, Methods and Challenges."),
+                   tags$li("Gujral K, Basu A (2019). Impact of Rural and Urban Hospital Closures on Inpatient Mortality."),
+                   tags$li("Guo J, Hernandez I, Dickson S, et al. (2022). Income Disparities in Driving Distance to Health Care Infrastructure in the United States."),
+                   tags$li("Haggerty T, Stephens HM, Peckens SA, et al. (2022). Telemedicine Versus In-Person Primary Care in a Rural Appalachian Population."),
+                   tags$li("Hong I, Wilson B, Gross T, et al. (2023). Challenging Terrains: Socio-Spatial Analysis of Primary Health Care Access Disparities in West Virginia."),
+                   tags$li("Kabayundo J, Ahuja M, Jadhav S, et al. (2025). Transportation Barriers to Healthcare Access: A Scoping Review."),
+                   tags$li("Kaboli P, Blaine A, Mares J, et al. (2026). Health Care Access From the Rural Perspective: A Narrative Review."),
+                   tags$li("Mullens CL, Hernandez JA, Murthy J, et al. (2024). Understanding the Impacts of Rural Hospital Closures."),
+                   tags$li("Srygley S, Khairunnisa N, Elliott D (2025). The Appalachian Region: A Data Overview from the 2019–2023 ACS Chartbook."),
+                   tags$li("VanDerslice J (2011). Drinking Water Infrastructure and Environmental Disparities."),
+                   tags$li("Vrtikapa K, Hoque Urmy F, Hoque F (2024). Social Determinants of Health: The Impact of This Overlooked Vital Sign."),
+                   tags$li("Whitacre BE, Wheeler D, Landgraf C (2017). What Can the National Broadband Map Tell Us About the Health Care Connectivity Gap?"),
+                   tags$li("Zeng D, You W, Mills B, et al. (2015). A Closer Look at the Rural–Urban Health Disparities in Virginia.")
+                 )
+               )
+             )
              )
     )
   ),
   
+
+# maps -------------------------------------------------------------------
+tabPanel(
+  "Maps",
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("variable",
+                  "Choose variable:",
+                  choices = names(join22)[sapply(join22, is.numeric)])
+    ),
+    
+    mainPanel(
+      leafletOutput("map"),
+      
+    )
+  )
+), 
+
+# analysis ----------------------------------------------------------------
   tabPanel(
-    "Results",
+    "Analysis",
     fluidPage(
-      h1("Results", align = "center")
-      # additional content
+      h1("table of variables", align = "center"),
+      
+      tableOutput("summary")
     )
   ), 
   
+
+# data sources ------------------------------------------------------------
   tabPanel(
-    "Data",
+    "Data Sources",
     fluidPage(
       h1("Data Sources", align = "center"),
       
@@ -137,6 +205,8 @@ Inhabitants of rural areas across the US are disproportionally impacted by healt
       
   )), 
   
+
+# about  -------------------------------------------------------------------
   tabPanel(
     "About Us", 
     fluidPage(
@@ -168,27 +238,43 @@ Inhabitants of rural areas across the US are disproportionally impacted by healt
 ) #end ui
 
 
-#server
-server <- function(input, output) {
+
+# server ------------------------------------------------------------------
+server <- function(input, output, session) {
   
-  output$welcome<- renderText({
-    paste0("Welcome to our 2026 DSPG Rural Health and Infrastructure project page!")
+  map_data <- reactive({
+    counties_sf %>%
+      left_join(join22, by = "GEOID")
   })
-  output$va_map <- renderLeaflet({
+  
+  output$map <- renderLeaflet({
     
-    leaflet(data = va_localities) |> 
-      addProviderTiles("Esri.WorldTopoMap") |> 
+    df <- map_data()
+    var <- input$variable
+    
+    pal <- colorNumeric("viridis", df[[var]], na.color = "transparent")
+    
+    leaflet(df) %>%
+      addProviderTiles("CartoDB.Positron") %>%
       addPolygons(
-      fillColor = "white",
-      color = "black",
-      weight = 1,
-      fillOpacity = 1,
-      label = ~NAMELSAD
-      )
+        fillColor = ~pal(df[[var]]),
+        fillOpacity = 1,
+        weight = 1,
+        color = "lightgrey",
+        popup = ~paste(NAME, "<br>", var, ":", df[[var]])
+      ) %>% 
+      addLegend( position = "bottomright", pal = pal, values = df[[var]], 
+                 title = var, opacity = 0.7 )
   })
-} 
+  
+  output$summary <- renderTable({
+    summ
+  })
+} #end server
   
   
-#end server
+
+#  run app ----------------------------------------------------------------
+
 
 shinyApp(ui, server)
