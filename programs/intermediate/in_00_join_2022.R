@@ -11,9 +11,6 @@ chr = read.csv(here("data", "outcome", "CHR", "chr2022.csv"))
 form477 = read.csv(here("data", "outcome", "FCC_form477", "form477_2022.csv"))
 hrsa = read.csv(here("data", "outcome", "HRSA", "clean_HRSA_2022.csv"))
 
-states = read.csv("states.csv")
-states_keep <- states$state_abbr
-
 acs <- acs %>% 
   filter(GEOID < 57000) %>% 
   rename(state = state_abbrev)

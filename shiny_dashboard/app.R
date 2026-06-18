@@ -10,7 +10,7 @@ library(sf)
 library(dplyr)
 library(viridis)
 
-setwd("~/College/DSPG/rural_health_DSPG/shiny_dashboard")
+#setwd("~/College/DSPG/rural_health_DSPG/shiny_dashboard")
 
 # data loading, etc -------------------------------------------------------
 join22 = read.csv("join2022.csv")
@@ -26,6 +26,8 @@ counties_sf <- counties(cb = TRUE, year = 2022, class = "sf")
 counties_sf <- counties_sf %>%
   mutate(GEOID = as.numeric(GEOID))
 
+counties_sf <- st_transform(counties_sf, 4326)
+
 map_data <- counties_sf %>%
   left_join(join22, by = c("GEOID" = "GEOID"))
 
@@ -35,8 +37,44 @@ ui <- navbarPage("Rural Health and Infrastructure",
                  
 # overview panel ----------------------------------------------------------
   tabPanel("Overview", 
-           h1("Exploring the Impacts of Infrastructure on Health Outcomes in the US"),
-    fluidPage(
+           fluidPage(
+           h1("Exploring the Impacts of Infrastructure on Health Outcomes in the Rural US", align = "center"),
+           h3("Data Science for the Public Good Program 2026", align="center"),
+           h4("Stakeholder: Ballad Health", align="center"),
+           div(
+             style = "text-align: center;",
+             tags$a(
+               href = "https://www.balladhealth.org",
+               target = "_blank",
+               img(
+                 src = "ballad.jpg",
+                 style = "width:200px; flex-shrink:0;"
+               )
+             )
+           ),
+           column(6,
+                  h3("Project Overview"),
+                  p("Health disparities between rural and urban communities remain a persistent challenge in the United States. Rural populations experience higher rates of chronic disease, mortality, and behavioral health conditions while facing greater barriers to accessing healthcare services. Although socioeconomic and environmental determinants of health have been extensively studied, the role of infrastructure—particularly broadband connectivity, transportation networks, and healthcare accessibility—has received comparatively less attention despite growing evidence that these factors significantly influence health outcomes. Infrastructure shapes the ability of individuals to obtain timely and effective healthcare. Broadband access enables telehealth services, appointment scheduling, and access to health information. Transportation infrastructure affects travel times to medical facilities and influences the ability to seek preventive and emergency care. Similarly, the geographic accessibility of healthcare facilities determines whether residents can obtain routine treatment, manage chronic conditions, and receive specialized services when needed. These challenges are particularly pronounced in rural communities, where geographic isolation, provider shortages, and infrastructure limitations often compound existing health disparities. "),
+                  p("The project is being conducted through the Data Science for the Public Good (DSPG) program at Virginia Tech in collaboration with Ballad Health, the Kohl Centre, and the Whole Health Consortium.")
+                  
+                  
+                  
+                  ),
+           column(6,
+                  h3("Research Question"),
+                  p("What are the relationships between infrastructure variables such as broadband and healthcare facility access, and health outcome variables such as mortality rate and mental health in rural Virginia?"),
+                  h3("Project Objectives"),
+                  p("This project seeks to examine the relationship between infrastructure and health outcomes by developing a comprehensive county-level dataset that integrates public health indicators with measures of broadband availability, transportation access, and healthcare accessibility. While the project will have a particular focus on rural Virginia and Appalachia, the dataset will be designed to support analysis across the broader United States. Objectives include:"),
+                  tags$ul(
+                    tags$li("Develop a comprehensive county-level infrastructure and health dataset"),
+                    tags$li("Measure key dimensions of infrastructure access"),
+                    tags$li("Examine relationships between infrastructure and health outcomes"),
+                    tags$li("Conduct geospatial and statistical analysis"),
+                    tags$li("Produce maps and visualizations illustrating geographic variation in infrastructure access and health outcomes across rural communities"),
+                    tags$li("Use causal inference methods to better isolate the relationship between specific infrastructure interventions and health outcomes")
+                  )
+                  
+                  )
       
     )
   ),
@@ -163,7 +201,7 @@ tabPanel(
             target_ = "_blank",
             style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
         ),
-        p('"The Federal Communications Commission (FCC) regulates interstate and international communications by radio, television, wire, satellite, and cable in all 50 states, the District of Columbia and U.S. territories. A U.S. government agency overseen by Congress, the Commission is the federal agency responsible for implementing and enforcing America’s communications law & regulations."',
+        p('"The Federal Communications Commission (FCC) regulates interstate and international communications by radio, television, wire, satellite, and cable in all 50 states, the District of Columbia and U.S. territories. A U.S. government agency overseen by Congress, the Commission is the federal agency responsible for implementing and enforcing America’s communications law & regulations." Using the FCC\'s Form 477, we were able to collect data on broadband adoption across counties.',
           style = "font-size:14px; color:#333333; margin-top:5px;")
       )
       ),
@@ -181,13 +219,14 @@ tabPanel(
             target = "_blank",
             style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
           ),
-          p("\"The American Community Survey (ACS) is the premier source of detailed information about the nation's people and housing. As an ongoing survey conducted by the U.S. Census Bureau since 2005, the ACS collects detailed social, economic, housing, and demographic information from a sample of households across the 50 states, the District of Columbia, and Puerto Rico.\"",
+          p("\"The American Community Survey (ACS) is the premier source of detailed information about the nation's people and housing. As an ongoing survey conducted by the U.S. Census Bureau since 2005, the ACS collects detailed social, economic, housing, and demographic information from a sample of households across the 50 states, the District of Columbia, and Puerto Rico.\" We used ACS to get demographic data and commuting patterns.",
             style = "font-size:14px; color:#333333; margin-top:5px;")
         )
       ),
       
       hr(),
       
+      #places
       div(
         style = "display: flex; align-items: flex-start; gap: 20px;",
         img(src = "cdc_places.jpg", height = "100px", style = "flex-shrink:0;"),
@@ -198,17 +237,76 @@ tabPanel(
             target = "_blank",
             style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
           ),
-          p('"PLACES provides health and health-related data using small area estimation for counties, incorporated and census designated places, census tracts, and ZIP Code Tabulation Areas (ZCTAs) across the United States. This project, which started in 2015, is a partnership between CDC, the Robert Wood Johnson Foundation, and the CDC Foundation."',
+          p('"PLACES provides health and health-related data using small area estimation for counties, incorporated and census designated places, census tracts, and ZIP Code Tabulation Areas (ZCTAs) across the United States. This project, which started in 2015, is a partnership between CDC, the Robert Wood Johnson Foundation, and the CDC Foundation." We used CDC places to get data on chronic disease prevalence across counties.',
+            style = "font-size:14px; color:#333333; margin-top:5px;")
+        )
+      ),
+      
+      hr(),
+      
+      #wonder
+      div(
+        style = "display: flex; align-items: flex-start; gap: 20px;",
+        img(src = "cdc.jpg", height = "100px", style = "flex-shrink:0;"),
+        div(
+          tags$a(
+            "CDC WONDER",
+            href = "https://wonder.cdc.gov/",
+            target = "_blank",
+            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+          ),
+          p('"Wide-ranging ONline Data for Epidemiologic Research is an easy-to-use, menu-driven system that makes the information resources of the Centers for Disease Control and Prevention (CDC) available to public health professionals and the public at large. It provides access to a wide array of public health information." We used WONDER to download mortality data.',
+            style = "font-size:14px; color:#333333; margin-top:5px;")
+        )
+      ),
+      
+      hr(),
+      
+      #hrsa
+      div(
+        style = "display: flex; align-items: flex-start; gap: 20px;",
+        img(src = "hrsa.jpg", height = "100px", style = "flex-shrink:0;"),
+        div(
+          tags$a(
+            "Health Resources and Services Administration",
+            href = "https://www.hrsa.gov/",
+            target = "_blank",
+            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+          ),
+          p('"Established in 1980, HRSA is the primary federal agency responsible for ensuring access to health care services for people who are uninsured, isolated, or medically vulnerable, including those living with HIV/AIDS, mothers and children, and those living in rural areas." We used the HRSA\'s Area Health Resource File to get data on health professionals and hospitals in counties.',
+            style = "font-size:14px; color:#333333; margin-top:5px;")
+        )
+      ),
+      
+      hr(),
+      
+      #hrsa
+      div(
+        style = "display: flex; align-items: flex-start; gap: 20px;",
+        img(src = "usda_ruc.jpg", height = "100px", style = "flex-shrink:0;"),
+        div(
+          tags$a(
+            "USDA Rural Urban Continuum Codes",
+            href = "https://www.ers.usda.gov/data-products/rural-urban-continuum-codes",
+            target = "_blank",
+            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+          ),
+          p('"The 2023 Rural-Urban Continuum Codes distinguish U.S. metropolitan (metro) counties by the population size of their metro area, and nonmetropolitan (nonmetro) counties by their degree of urbanization and adjacency to a metro area. " We used these to classify counties as urban or rural.',
             style = "font-size:14px; color:#333333; margin-top:5px;")
         )
       )
+      
+      
+      
+      
+      
       
   )), 
   
 
 # about  -------------------------------------------------------------------
   tabPanel(
-    "About Us", 
+    "About", 
     fluidPage(
       h1("Meet the Health and Infrastructure Team", 
          align = "center"),
