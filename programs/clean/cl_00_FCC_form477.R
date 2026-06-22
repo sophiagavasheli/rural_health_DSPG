@@ -58,9 +58,35 @@ clean_2008 = form2008 %>%
   ) %>% 
   filter(!year == 2008) #only have health data starting 2009
 
+# clean fcc county connections
+conn = read.csv(here("data", "source", "FCC", "FCC_form477_county_connections2009_2025.csv"))
+
+clean_conn  = conn %>% 
+  #convert state name to state abbreviation
+  left_join(states, by = c("statename" = "state_name")) %>%
+  rename(state = state_abbrev) %>% 
+  #all col names to lower case
+  rename_with(tolower) %>% 
+  select(-c(statename)) %>% 
+  #keep more recent month
+  filter(month == 12) %>% 
+  select(-month) %>% 
+  rename(county_name = countyname, fips = countycode) %>% 
+  filter(year <= 2023) %>% 
+  mutate(across(where(is.numeric), ~ na_if(., -9999)))
+
+
 all <- bind_rows(
   clean_2008,
   clean_2014
 )
 
-write.csv(all, "data/outcome/FCC_form477/clean_FCC_form477_2009_2023.csv")
+all <- all %>%
+  mutate(across(where(is.numeric), ~ na_if(., -999)))
+
+joined = left_join(all, clean_conn, 
+                   by = c("fips" = "fips", "county_name" = "county_name", 
+                          "year" = "year", "state" = "state"))
+
+
+write.csv(joined, "data/outcome/FCC_form477/clean_FCC_form477_2009_2023.csv", row.names = FALSE)
