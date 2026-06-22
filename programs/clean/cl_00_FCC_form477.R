@@ -3,37 +3,64 @@
 
 library(here)
 library(dplyr)
-library(stringr)
 
-form = read.csv(here("data", "source", "FCC", "FCC_form_477_county_tiers2014_2025.csv"))
+#cleaning 2014-2025 data
+form2014 = read.csv(here("data", "source", "FCC", "FCC_form_477_county_tiers2014_2025.csv"))
 
 # state name to state abbrev lookup table
 states = read.csv("states.csv")
 
-clean_form = form %>%
+clean_2014 = form2014 %>%
   #convert to UTF characters
   mutate(County_Name = iconv(County_Name, from = "",to = "UTF-8",sub = "")) %>% 
   select(-c(State, County)) %>% 
   #remove the word "County" from counties
-  mutate(County_Name = gsub(" County", "", County_Name)) %>% 
-  #convert FIPS to GEOID (add leading zeros)
-  mutate(FIPS = str_pad(FIPS, width = 5, side = "left", pad = "0")) %>% 
-  rename(GEOID = FIPS) %>% 
+  #mutate(County_Name = gsub(" County", "", County_Name)) %>% 
   #convert state name to state abbreviation
   left_join(states, by = c("State_Name" = "state_name")) %>%
   rename(state = state_abbrev) %>% 
   #all col names to lower case
   rename_with(tolower) %>% 
-  rename(GEOID = geoid) %>% 
-  select(-c(state_name))
+  select(-c(state_name, housing_units)) %>% 
+  #keep more recent month
+  filter(month == 12) %>% 
+  select(-month) %>% 
+  rename(
+    connections_200_kbps = tier_1,
+    connections_10_mbps = tier_2,
+    connections_25_mbps = tier_3,
+    connections_100_mbps = tier_4
+  ) %>% 
+  filter(year <= 2023) #health data ends 2023
 
-years = 2014:2025
 
-for (yr in years) {
-  year_dat = clean_form %>% 
-    filter(year == yr) %>% 
-    select(-year)
-  
-  write.csv(year_dat, here("data", "outcome", "FCC_form477", 
-                           paste0("form477_", yr, ".csv")), row.names = FALSE)
-}
+#cleaning 2008-2013 data
+form2008 = read.csv(here("data", "source", "FCC", "FCC_form_477_county_tiers2008_2013.csv"))
+
+clean_2008 = form2008 %>%
+  #convert to UTF characters
+  mutate(County_Name = iconv(County_Name, from = "",to = "UTF-8",sub = "")) %>% 
+  select(-c(State, County)) %>% 
+  #convert state name to state abbreviation
+  left_join(states, by = c("State_Name" = "state_name")) %>%
+  rename(state = state_abbrev) %>% 
+  #all col names to lower case
+  rename_with(tolower) %>% 
+  select(-c(state_name, housing_units)) %>% 
+  #keep more recent month
+  filter(month == 12) %>% 
+  select(-month) %>% 
+  rename(
+    connections_200_kbps = tier_1,
+    connections_768_kbps = tier_2,
+    connections_3_mbps = tier_3,
+    connections_10_mbps = tier_4
+  ) %>% 
+  filter(!year == 2008) #only have health data starting 2009
+
+all <- bind_rows(
+  clean_2008,
+  clean_2014
+)
+
+write.csv(all, "data/outcome/FCC_form477/clean_FCC_form477_2009_2023.csv")
