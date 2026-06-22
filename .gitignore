@@ -5,3 +5,4 @@
 .DS_Store
 .positai
 *.bash
+data/outcome/CLH/clean_CLH2009_2023.csv
