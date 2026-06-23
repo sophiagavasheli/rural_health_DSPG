@@ -1,114 +1,162 @@
+# creating data for data availability dashboard
+
 library(dplyr)
 library(tidyr)
 library(stringr)
 
-actual_data = read.csv("data/outcome/CLH/clean_CLH2009_2023.csv")
-codebook = read.csv("reference/CLH_master_codebook.csv")
+actual_data <- read.csv("data/outcome/CLH/clean_CLH2009_2023.csv")
+codebook <- read.csv("reference/CLH_master_codebook.csv")
 
+geo_cols <- c(
+  "YEAR", "COUNTYFIPS", "STATEFIPS",
+  "STATE", "COUNTY", "REGION", "TERRITORY"
+)
 
-geo_cols <- c("YEAR", "COUNTYFIPS", "STATEFIPS", "STATE", "COUNTY", "REGION", "TERRITORY")
+remove_vars <- c(
+  "COUNTY", "COUNTYFIPS", "REGION",
+  "STATE", "STATEFIPS", "TERRITORY", "YEAR"
+)
+
 total_years <- n_distinct(actual_data$YEAR)
 
+# --------------------------------------------------
+# Variable-level yearly coverage
+# --------------------------------------------------
 
-# 1. Compute granular metrics per variable per year
-raw_coverage <- actual_data |>
-  select(all_of(geo_cols), everything()) |>
+raw_coverage <- actual_data %>%
   pivot_longer(
-    cols = -all_of(geo_cols), 
-    names_to = "Variable Name", 
+    cols = -all_of(geo_cols),
+    names_to = "Variable Name",
     values_to = "value"
-  ) |>
-  group_by(`Variable Name`, YEAR) |>
+  ) %>%
+  group_by(`Variable Name`, YEAR) %>%
   summarise(
-    na_pct = mean(is.na(value)),
+    na_pct = mean(is.na(value)) * 100,
     active_counties = n_distinct(COUNTYFIPS[!is.na(value)]),
-    is_present = ifelse(any(!is.na(value)), 1, 0),
+    is_present = as.integer(any(!is.na(value))),
     .groups = "drop"
-  )
-
-# 2. Compute the new global summary rules across ALL years
-global_summary <- raw_coverage |>
-  group_by(`Variable Name`) |>
-  summarise(
-    years_available = sum(is_present),
-    # County coverage represented as overall non-NA percentage across time
-    global_county_coverage = 1 - mean(na_pct),
-    .groups = "drop"
-  ) |>
+  ) %>%
   mutate(
-    availability_cat = case_when(
-      years_available == total_years ~ "Full Availability",
-      years_available >= 5           ~ "Partial",
-      TRUE                           ~ "Very Little"
+    coverage_pct = 100 - na_pct,
+    
+    coverage_level_year = case_when(
+      coverage_pct >= 70 ~ "Mostly Full Coverage",
+      coverage_pct >= 50 ~ "Partial Coverage",
+      TRUE ~ "Little Coverage"
     )
   )
 
-# 3. Shape year-by-year metrics for the popup layout
-wide_metrics <- raw_coverage |>
-  pivot_wider(
-    id_cols = "Variable Name",
-    names_from = YEAR,
-    values_from = c(na_pct, active_counties),
-    names_glue = "{YEAR}_{.value}"
+# --------------------------------------------------
+# Global summaries across all years
+# --------------------------------------------------
+
+global_summary <- raw_coverage %>%
+  group_by(`Variable Name`) %>%
+  summarise(
+    years_available = sum(is_present),
+    global_county_coverage = mean(coverage_pct),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    yearly_availability = case_when(
+      years_available == total_years ~ "Full Availability",
+      years_available >= 5 ~ "Partial Availability",
+      TRUE ~ "Very Little Availability"
+    ),
+    
+    county_coverage_level = case_when(
+      global_county_coverage >= 70 ~ "Mostly Full Coverage",
+      global_county_coverage >= 50 ~ "Partial Coverage",
+      global_county_coverage > 0 ~ "Little Coverage",
+      TRUE ~ "Unavailable"
+    )
   )
 
-# 4. Consolidate into the final dashboard dataset
-dashboard_data <- codebook |>
-  left_join(global_summary, by = c("Variable.Name" = "Variable Name")) |>
-  left_join(wide_metrics, by = c("Variable.Name" = "Variable Name")) %>% 
-  mutate(Domain  = gsub("^\\d+\\.\\s*", "", Domain)) %>% 
-  mutate(Domain  = gsub("Physical infrastructure", "Physical Infrastructure", Domain)) %>% 
-  filter(!Domain == "Identifier")
+# --------------------------------------------------
+# Create complete variable-year grid
+# Ensures every variable has every year represented
+# --------------------------------------------------
 
-#don't care about the availability of these vars
-remove_vars = c("COUNTY", "COUNTYFIPS", "REGION", "STATE", "STATEFIPS",
-                "TERRITORY", "YEAR")
-
-# pivoting table longer
-id_cols <- c(
-  "Variable.Name", "Variable.Label", "Domain",
-  "Topic", "Data.Source", "Data.Type", "availability_cat"
+all_var_years <- expand_grid(
+  `Variable Name` = unique(codebook$Variable.Name),
+  YEAR = sort(unique(actual_data$YEAR))
 )
 
-base <- dashboard_data %>%
-  select(all_of(id_cols))
+# --------------------------------------------------
+# Final dashboard dataset
+# One row = one variable in one year
+# --------------------------------------------------
 
-avail <- dashboard_data %>%
-  select(all_of(id_cols), starts_with("X")) %>%
-  pivot_longer(
-    cols = starts_with("X"),
-    names_to = "year",
-    names_prefix = "X",
-    values_to = "available"
+dashboard_long <- all_var_years %>%
+  
+  left_join(
+    raw_coverage,
+    by = c("Variable Name", "YEAR")
   ) %>%
-  mutate(year = as.integer(year))
-
-na <- dashboard_data %>%
-  select(all_of(id_cols), ends_with("_na_pct")) %>%
-  pivot_longer(
-    cols = ends_with("_na_pct"),
-    names_to = "year",
-    names_pattern = "(\\d{4})_na_pct",
-    values_to = "na_pct"
+  
+  mutate(
+    is_present = coalesce(is_present, 0L),
+    active_counties = coalesce(active_counties, 0),
+    na_pct = coalesce(na_pct, 100),
+    coverage_pct = coalesce(coverage_pct, 0),
+    coverage_level_year = coalesce(
+      coverage_level_year,
+      "Little Coverage"
+    )
   ) %>%
-  mutate(year = as.integer(year))
-
-
-active <- dashboard_data %>%
-  select(all_of(id_cols), ends_with("_active_counties")) %>%
-  pivot_longer(
-    cols = ends_with("_active_counties"),
-    names_to = "year",
-    names_pattern = "(\\d{4})_active_counties",
-    values_to = "active_counties"
+  
+  left_join(
+    codebook,
+    by = c("Variable Name" = "Variable.Name")
   ) %>%
-  mutate(year = as.integer(year))
+  
+  left_join(
+    global_summary,
+    by = "Variable Name"
+  ) %>%
+  
+  mutate(
+    Domain = str_remove(Domain, "^\\d+\\.\\s*"),
+    
+    Domain = str_replace(
+      Domain,
+      "Physical infrastructure",
+      "Physical Infrastructure"
+    )
+  ) %>%
+  
+  filter(
+    !`Variable Name` %in% remove_vars,
+    Domain != "Identifier"
+  ) %>%
+  
+  rename(
+    Year = YEAR,
+    Variable.Name = `Variable Name`,
+    Available = is_present,
+    Active.Counties = active_counties,
+    Yearly.County.Coverage.Pct = coverage_pct,
+    Yearly.County.Coverage.Level = coverage_level_year,
+    Years.Available = years_available,
+    Yearly.Availability.Level = yearly_availability,
+    Global.County.Coverage.Pct = global_county_coverage,
+    Global.County.Coverage.Level = county_coverage_level
+  ) %>%
+  select(-starts_with("X"), -na_pct) %>% 
+  
+  arrange(
+    Domain,
+    Topic,
+    Variable.Name,
+    Year
+  )
 
-long_data <- avail %>%
-  left_join(na, by = c(id_cols, "year")) %>%
-  left_join(active, by = c(id_cols, "year")) %>% 
-  filter(!Variable.Name %in% remove_vars) %>% 
-  mutate(year = as.integer(year)) %>% 
-  rename(Year = year)
+# --------------------------------------------------
+# Export
+# --------------------------------------------------
 
-write.csv(long_data, "reference/dashboard_data.csv", row.names = FALSE)
+write.csv(
+  dashboard_long,
+  "shiny_dashboard/dashboard_data.csv",
+  row.names = FALSE
+)
