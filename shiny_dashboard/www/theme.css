@@ -114,21 +114,32 @@ h1 {
    BUTTONS
 ========================================== */
 
-.btn-primary {
-  background-color: #2d6a4f;
-  border-color: #2d6a4f;
-  border-radius: 999px;
-}
-
-.btn-primary:hover,
-.btn-primary:focus {
-  background-color: #1b4332;
-  border-color: #1b4332;
-  border-radius: 999px;
-}
 
 .btn-default:hover {
-  background-color: #eef5ef;
+  background-color: #b7c9bd;
+  border-radius: 999px;
+}
+
+.btn-primary {
+  background-color: white;
+  color: #2d6a4f;
+  border: 1px solid #2d6a4f;
+  border-radius: 999px;
+}
+
+.btn-primary:hover {
+  background-color: #2d6a4f;
+}
+
+.domain-selected {
+  background-color: #2d6a4f !important;
+  color: white !important;
+  border-color: #2d6a4f !important;
+}
+
+.domain-selected:hover {
+  background-color: #1b4332 !important;
+  border-color: #1b4332 !important;
 }
 
 /* ==========================================

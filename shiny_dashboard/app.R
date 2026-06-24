@@ -612,7 +612,7 @@ server <- function(input, output, session) {
         
         tags$button(
           type = "button",
-          class = if (selectedDomain() == d) "btn-primary:focus" else "btn-primary",
+          class = if (selectedDomain() == d) "btn-primary domain-selected" else "btn-primary",
           `data-domain` = d,
           onclick = "Shiny.setInputValue('domain_click', this.getAttribute('data-domain'), {priority: 'event'})",
           d

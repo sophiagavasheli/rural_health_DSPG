@@ -1,4 +1,4 @@
-"year","fips","county_name","connections_200_kbps","connections_768_kbps","connections_3_mbps","connections_10_mbps","state","connections_25_mbps","connections_100_mbps","consumer","non_consumer","all"
+"year","fips","county_name","FCC_res_connections_200_kbps","FCC_res_connections_768_kbps","FCC_res_connections_3_mbps","FCC_res_connections_10_mbps","state","FCC_res_connections_25_mbps","FCC_res_connections_100_mbps","FCC_county_consumer_connections","FCC_county_non_consumer_connections","FCC_county_all_connections"
 2013,1001,"Autauga County",4,4,3,3,"AL",NA,NA,14,1,15
 2013,1003,"Baldwin County",3,3,3,2,"AL",NA,NA,58,8,66
 2013,1005,"Barbour County",2,2,2,1,"AL",NA,NA,5,1,5

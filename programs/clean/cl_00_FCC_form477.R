@@ -26,10 +26,10 @@ clean_2014 = form2014 %>%
   filter(month == 12) %>% 
   select(-month) %>% 
   rename(
-    connections_200_kbps = tier_1,
-    connections_10_mbps = tier_2,
-    connections_25_mbps = tier_3,
-    connections_100_mbps = tier_4
+    FCC_res_connections_200_kbps = tier_1,
+    FCC_res_connections_10_mbps = tier_2,
+    FCC_res_connections_25_mbps = tier_3,
+    FCC_res_connections_100_mbps = tier_4
   ) %>% 
   filter(year <= 2023) #health data ends 2023
 
@@ -51,10 +51,10 @@ clean_2008 = form2008 %>%
   filter(month == 12) %>% 
   select(-month) %>% 
   rename(
-    connections_200_kbps = tier_1,
-    connections_768_kbps = tier_2,
-    connections_3_mbps = tier_3,
-    connections_10_mbps = tier_4
+    FCC_res_connections_200_kbps = tier_1,
+    FCC_res_connections_768_kbps = tier_2,
+    FCC_res_connections_3_mbps = tier_3,
+    FCC_res_connections_10_mbps = tier_4
   ) %>% 
   filter(!year == 2008) #only have health data starting 2009
 
@@ -73,7 +73,12 @@ clean_conn  = conn %>%
   select(-month) %>% 
   rename(county_name = countyname, fips = countycode) %>% 
   filter(year <= 2023) %>% 
-  mutate(across(where(is.numeric), ~ na_if(., -9999)))
+  mutate(across(where(is.numeric), ~ na_if(., -9999))) %>% 
+  rename(
+    FCC_county_consumer_connections = consumer,
+    FCC_county_non_consumer_connections = non_consumer,
+    FCC_county_all_connections = all 
+  )
 
 
 all <- bind_rows(
