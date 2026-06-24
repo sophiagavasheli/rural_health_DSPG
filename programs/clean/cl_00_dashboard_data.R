@@ -4,7 +4,7 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 
-actual_data <- read.csv("data/outcome/CLH/")
+actual_data <- read.csv("shiny_dashboard/clean_FCC_CLH_data.csv")
 codebook <- read.csv("reference/all_codebook.csv")
 
 geo_cols <- c(
@@ -116,6 +116,7 @@ dashboard_long <- all_var_years %>%
   ) %>%
   
   mutate(
+    #clean domain names
     Domain = str_remove(Domain, "^\\d+\\.\\s*"),
     
     Domain = str_replace(
@@ -124,7 +125,7 @@ dashboard_long <- all_var_years %>%
       "Physical Infrastructure"
     )
   ) %>%
-  
+  #remove vars not wanted in dashboard
   filter(
     !`Variable Name` %in% remove_vars,
     Domain != "Identifier"

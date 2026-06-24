@@ -12,10 +12,7 @@ library(viridis)
 
 
 # data loading, etc -------------------------------------------------------
-join22 = read.csv("join2022.csv")
-summ = read.csv("summary2022.csv")
-summ = summ %>% 
-  arrange(desc(Num_NAs))
+
 
 # map
 options(tigris_use_cache = TRUE)
@@ -27,8 +24,7 @@ counties_sf <- counties_sf %>%
 
 counties_sf <- st_transform(counties_sf, 4326)
 
-map_data <- counties_sf %>%
-  left_join(join22, by = c("GEOID" = "GEOID"))
+
 
 long_data <- read.csv("dashboard_data.csv", stringsAsFactors = FALSE, check.names = FALSE)
 
@@ -327,8 +323,8 @@ tabPanel(
           uiOutput("domainButtons"),
       ),
       column(3,
-          textInput("varSearch", "Search variables", 
-                    placeholder = "e.g. poverty, unemployment...")
+          textInput("varSearch", "Search Variables/Topics:", 
+                    placeholder = "e.g. poverty, broadband...")
            )
   ),
     
@@ -499,13 +495,11 @@ tabPanel(
   "Maps",
   sidebarLayout(
     sidebarPanel(
-      selectInput("variable",
-                  "Choose variable:",
-                  choices = names(join22)[sapply(join22, is.numeric)])
+      p("future input")
     ),
     
     mainPanel(
-      leafletOutput("map"),
+      p("future map")
       
     )
   )
@@ -515,9 +509,7 @@ tabPanel(
   tabPanel(
     "Analysis",
     fluidPage(
-      h1("table of variables", align = "center"),
-      
-      tableOutput("summary")
+      h1("Analysis")
     )
   ), 
   
@@ -562,34 +554,6 @@ server <- function(input, output, session) {
 
 # map ---------------------------------------------------------------------
 
-  map_data <- reactive({
-    counties_sf %>%
-      left_join(join22, by = "GEOID")
-  })
-  
-  output$map <- renderLeaflet({
-    
-    df <- map_data()
-    var <- input$variable
-    
-    pal <- colorNumeric("viridis", df[[var]], na.color = "transparent")
-    
-    leaflet(df) %>%
-      addProviderTiles("CartoDB.Positron") %>%
-      addPolygons(
-        fillColor = ~pal(df[[var]]),
-        fillOpacity = 1,
-        weight = 1,
-        color = "lightgrey",
-        popup = ~paste(NAME, "<br>", var, ":", df[[var]])
-      ) %>% 
-      addLegend( position = "bottomright", pal = pal, values = df[[var]], 
-                 title = var, opacity = 0.7 )
-  })
-  
-  output$summary <- renderTable({
-    summ
-  })
   
 
   # data avail dash ---------------------------------------------------------
@@ -689,7 +653,7 @@ server <- function(input, output, session) {
   })
   
   # STAGE 4 — text search, applied after domain filtering.
-  # Matches Variable.Name OR Variable.Label, case-insensitive.
+  # Matches Variable.Name OR Variable.Label OR Topic, case-insensitive.
   # Only recomputes when input$varSearch or filtered() changes.
   
   searched <- reactive({
@@ -701,7 +665,8 @@ server <- function(input, output, session) {
       df <- df %>%
         filter(
           grepl(query, Variable.Name, ignore.case = TRUE) |
-            grepl(query, Variable.Label, ignore.case = TRUE)
+            grepl(query, Variable.Label, ignore.case = TRUE) |
+            grepl(query, Topic, ignore.case = TRUE)
         )
     }
     
@@ -724,9 +689,7 @@ server <- function(input, output, session) {
   })
   
   
-  # Helper: map a coverage pct -> color. Pulled out so it's not redefined
-  # inside the render loop on every call.
-  
+  # Helper: map a coverage pct -> color. 
   pctToColor <- function(pct) {
     if (is.na(pct)) return("#9e9e9e")
     if (pct == 0) return("#9e9e9e")
