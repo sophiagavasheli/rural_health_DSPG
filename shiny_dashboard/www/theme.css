@@ -117,12 +117,14 @@ h1 {
 .btn-primary {
   background-color: #2d6a4f;
   border-color: #2d6a4f;
+  border-radius: 999px;
 }
 
 .btn-primary:hover,
 .btn-primary:focus {
   background-color: #1b4332;
   border-color: #1b4332;
+  border-radius: 999px;
 }
 
 .btn-default:hover {
@@ -281,3 +283,4 @@ hr {
   line-height: 1.4;
   margin-top: 10px;
 }
+

@@ -158,9 +158,8 @@ Inhabitants of rural areas across the US are disproportionally impacted by healt
     )
   ),
 
-
+navbarMenu("Data",
 # data avail dash ---------------------------------------------------------
-
 tabPanel(
   "Data Availability Dashboard",
   fluidPage(
@@ -171,21 +170,6 @@ tabPanel(
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
-    }
-
-    .domain-btn {
-      border-radius: 999px;
-      border: 1px solid #cfd8dc;
-      background: #f5f6f8;
-      padding: 6px 12px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .domain-btn.active {
-      background: #1565c0;
-      color: white;
-      border-color: #1565c0;
     }
 
     .table-wrap {
@@ -249,11 +233,33 @@ tabPanel(
       border-bottom: 2px solid #ccc;
       padding-bottom: 4px;
     }
+    
+    .irs-bar, .irs-bar-edge {
+      background-color: #2d6a4f !important;
+      border-top-color: #eef5ef !important;
+      border-bottom-color: #eef5ef !important;
+    }
+      
+    .irs-single, .irs-from, .irs-to, .irs-handle {
+      background-color: #2d6a4f !important;
+      border-color: #eef5ef !important;
+    }
+    
+    input[type='checkbox']:checked {
+        background-color: #2d6a4f !important;
+        border-color: #eef5ef !important;
+    }
+      
+      input[type='checkbox']:focus {
+        border-color: #2d6a4f !important;
+        box-shadow: 0 0 0 0.25rem #eef5ef !important;
+      }
   "))),
     
     h1("Data Availability Dashboard"),
     p("Select the domain, years, level of availability for each year, and average county coverage to view variables."),
     
+    # year slider
     fluidRow(
       column(3,
              sliderInput(
@@ -266,8 +272,8 @@ tabPanel(
                sep = ""
              )
       ),
-      
-      column(3,       
+      #availability checkbox
+      column(2,       
              checkboxGroupInput(
                "availability",
                "Yearly Availability:",
@@ -275,7 +281,7 @@ tabPanel(
                selected = unique(long_data$Yearly.Availability.Level)
              )
       ),
-      
+      #coverage checkbox
       column(3,       
              checkboxGroupInput( 
                "coverage", 
@@ -285,10 +291,10 @@ tabPanel(
                )
              
       ),
-      
-      column(3,
+      #legend
+      column(4,
              tags$div(
-               class = "well", # Adds a neat border and light gray background box
+               class = "well", # Adds a border and light gray background box
                style = "padding: 10px; max-width: 250px;",
                
                tags$h5(strong("Legend:")),
@@ -296,15 +302,15 @@ tabPanel(
                # Legend Items
                tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
                         tags$span(style = "background-color: #2e7d32; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
-                        "Mostly Full Coverage"
+                        "Mostly Full Coverage (>70%)"
                ),
                tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
                         tags$span(style = "background-color: #fbc02d; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
-                        "Partial Coverage"
+                        "Partial Coverage (50-69%)"
                ),
                tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
                         tags$span(style = "background-color: #c62828; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
-                        "Little Coverage"
+                        "Little Coverage (<50%)"
                ),
                tags$div(style = "display: flex; align-items: center;",
                         tags$span(style = "background-color: #9e9e9e; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
@@ -313,15 +319,179 @@ tabPanel(
              )
       )
     ),
-    # DOMAIN BUTTONS
-    p(strong("Domain:")),
-    uiOutput("domainButtons"),
     
+    # domain buttons and search bar
+    fluidRow(
+      column(9,
+          p(strong("Domain:")),
+          uiOutput("domainButtons"),
+      ),
+      column(3,
+          textInput("varSearch", "Search variables", 
+                    placeholder = "e.g. poverty, unemployment...")
+           )
+  ),
     
     hr(),
     
     uiOutput("explorer")
   )
+),
+# data sources ------------------------------------------------------------
+tabPanel(
+  "Data Sources",
+  fluidPage(
+    h1("Primary Sources"),
+    
+    # CLH
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "ahrq.png", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "Agency for Healthcare Research and Quality",
+          href = "https://www.ahrq.gov/data/innovations/clh-data.html",
+          target_ = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p('"AHRQ\'s database on Community-Level Health (CLH) was created under a project funded by the Patient Centered Outcomes Research (PCOR) Trust Fund. The purpose of this project is to create easy to use, linkable small-area data on health-related factors to use in PCOR research, inform approaches to address emerging health issues, and ultimately contribute to improved health outcomes." Our data availability dashboard is constructed mostly from the CLH data.',
+          style = "font-size:14px; color:#333333; margin-top:5px;")
+      )
+    ),
+    
+    hr(),
+    
+    # FCC
+    div(
+      style = "display: flex; align-items:center; margin-bottom:20px; gap: 20px;",
+      img(src = "fcc.png",height = "150px", width = "150px",style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "Federal Communications Commission",
+          href = "https://www.fcc.gov/",
+          target_ = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p('"The Federal Communications Commission (FCC) regulates interstate and international communications by radio, television, wire, satellite, and cable in all 50 states, the District of Columbia and U.S. territories. A U.S. government agency overseen by Congress, the Commission is the federal agency responsible for implementing and enforcing America’s communications law & regulations." Using the FCC\'s Form 477, we were able to collect data on broadband adoption across counties.',
+          style = "font-size:14px; color:#333333; margin-top:5px;")
+      )
+    ),
+    
+    hr(),
+    
+    # CMS
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "cms.png", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "Centers for Medicare & Medicaid Services",
+          href = "https://data.cms.gov/provider-data/archived-data/hospitals",
+          target_ = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p('"The Centers for Medicare and Medicaid Services (CMS) provides health coverage to more than 100 million people through Medicare, Medicaid, the Children’s Health Insurance Program, and the Health Insurance Marketplace. The CMS seeks to strengthen and modernize the Nation’s health care system, to provide access to high quality care and improved health at lower costs." We downloaded a list of hospitals from CMS.',
+          style = "font-size:14px; color:#333333; margin-top:5px;")
+      )
+    ),
+    
+    hr(),
+    
+    h1("Secondary Sources"),
+    p("The following sources are just a few that the CLH database is constructed with."),
+    
+    # ACS
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "acs.png", height = "120px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "American Comunity Survey",
+          href = "https://www.census.gov/programs-surveys/acs.html",
+          target = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p("\"The American Community Survey (ACS) is the premier source of detailed information about the nation's people and housing. As an ongoing survey conducted by the U.S. Census Bureau since 2005, the ACS collects detailed social, economic, housing, and demographic information from a sample of households across the 50 states, the District of Columbia, and Puerto Rico.\" ",
+          style = "font-size:14px; color:#333333; margin-top:5px;")
+      )
+    ),
+    
+    hr(),
+    
+    #places
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "cdc_places.jpg", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "CDC PLACES",
+          href = "https://www.cdc.gov/places/index.html",
+          target = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p('"PLACES provides health and health-related data using small area estimation for counties, incorporated and census designated places, census tracts, and ZIP Code Tabulation Areas (ZCTAs) across the United States. This project, which started in 2015, is a partnership between CDC, the Robert Wood Johnson Foundation, and the CDC Foundation." ',
+          style = "font-size:14px; color:#333333; margin-top:5px;")
+      )
+    ),
+    
+    hr(),
+    
+    #wonder
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "cdc.jpg", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "CDC WONDER",
+          href = "https://wonder.cdc.gov/",
+          target = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p('"Wide-ranging ONline Data for Epidemiologic Research is an easy-to-use, menu-driven system that makes the information resources of the Centers for Disease Control and Prevention (CDC) available to public health professionals and the public at large. It provides access to a wide array of public health information."',
+          style = "font-size:14px; color:#333333; margin-top:5px;")
+      )
+    ),
+    
+    hr(),
+    
+    #hrsa
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "hrsa.jpg", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "Health Resources and Services Administration",
+          href = "https://www.hrsa.gov/",
+          target = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p('"Established in 1980, HRSA is the primary federal agency responsible for ensuring access to health care services for people who are uninsured, isolated, or medically vulnerable, including those living with HIV/AIDS, mothers and children, and those living in rural areas." ',
+          style = "font-size:14px; color:#333333; margin-top:5px;")
+      )
+    ),
+    
+    hr(),
+    
+    #rucc
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "usda_ruc.jpg", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "USDA Rural Urban Continuum Codes",
+          href = "https://www.ers.usda.gov/data-products/rural-urban-continuum-codes",
+          target = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p('"The 2023 Rural-Urban Continuum Codes distinguish U.S. metropolitan (metro) counties by the population size of their metro area, and nonmetropolitan (nonmetro) counties by their degree of urbanization and adjacency to a metro area. " ',
+          style = "font-size:14px; color:#333333; margin-top:5px;")
+      )
+    ),
+    
+    hr()
+    
+    
+  ))
 ),
 
 # maps -------------------------------------------------------------------
@@ -351,125 +521,6 @@ tabPanel(
     )
   ), 
   
-
-# data sources ------------------------------------------------------------
-  tabPanel(
-    "Data Sources",
-    fluidPage(
-      h1("Data Sources", align = "center"),
-      
-      # FCC
-      div(
-        style = "display: flex; align-items:center; margin-bottom:20px; gap: 20px;",
-        img(src = "fcc.png",height = "150px", width = "150px",style = "flex-shrink:0;"),
-        div(
-          tags$a(
-            "Federal Communications Commission",
-            href = "https://www.fcc.gov/",
-            target_ = "_blank",
-            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
-        ),
-        p('"The Federal Communications Commission (FCC) regulates interstate and international communications by radio, television, wire, satellite, and cable in all 50 states, the District of Columbia and U.S. territories. A U.S. government agency overseen by Congress, the Commission is the federal agency responsible for implementing and enforcing America’s communications law & regulations." Using the FCC\'s Form 477, we were able to collect data on broadband adoption across counties.',
-          style = "font-size:14px; color:#333333; margin-top:5px;")
-      )
-      ),
-      
-      hr(),
-      
-      # ACS
-      div(
-        style = "display: flex; align-items: flex-start; gap: 20px;",
-        img(src = "acs.png", height = "120px", style = "flex-shrink:0;"),
-        div(
-          tags$a(
-            "American Comunity Survey",
-            href = "https://www.census.gov/programs-surveys/acs.html",
-            target = "_blank",
-            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
-          ),
-          p("\"The American Community Survey (ACS) is the premier source of detailed information about the nation's people and housing. As an ongoing survey conducted by the U.S. Census Bureau since 2005, the ACS collects detailed social, economic, housing, and demographic information from a sample of households across the 50 states, the District of Columbia, and Puerto Rico.\" We used ACS to get demographic data and commuting patterns.",
-            style = "font-size:14px; color:#333333; margin-top:5px;")
-        )
-      ),
-      
-      hr(),
-      
-      #places
-      div(
-        style = "display: flex; align-items: flex-start; gap: 20px;",
-        img(src = "cdc_places.jpg", height = "100px", style = "flex-shrink:0;"),
-        div(
-          tags$a(
-            "CDC PLACES",
-            href = "https://www.cdc.gov/places/index.html",
-            target = "_blank",
-            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
-          ),
-          p('"PLACES provides health and health-related data using small area estimation for counties, incorporated and census designated places, census tracts, and ZIP Code Tabulation Areas (ZCTAs) across the United States. This project, which started in 2015, is a partnership between CDC, the Robert Wood Johnson Foundation, and the CDC Foundation." We used CDC places to get data on chronic disease prevalence across counties.',
-            style = "font-size:14px; color:#333333; margin-top:5px;")
-        )
-      ),
-      
-      hr(),
-      
-      #wonder
-      div(
-        style = "display: flex; align-items: flex-start; gap: 20px;",
-        img(src = "cdc.jpg", height = "100px", style = "flex-shrink:0;"),
-        div(
-          tags$a(
-            "CDC WONDER",
-            href = "https://wonder.cdc.gov/",
-            target = "_blank",
-            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
-          ),
-          p('"Wide-ranging ONline Data for Epidemiologic Research is an easy-to-use, menu-driven system that makes the information resources of the Centers for Disease Control and Prevention (CDC) available to public health professionals and the public at large. It provides access to a wide array of public health information." We used WONDER to download mortality data.',
-            style = "font-size:14px; color:#333333; margin-top:5px;")
-        )
-      ),
-      
-      hr(),
-      
-      #hrsa
-      div(
-        style = "display: flex; align-items: flex-start; gap: 20px;",
-        img(src = "hrsa.jpg", height = "100px", style = "flex-shrink:0;"),
-        div(
-          tags$a(
-            "Health Resources and Services Administration",
-            href = "https://www.hrsa.gov/",
-            target = "_blank",
-            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
-          ),
-          p('"Established in 1980, HRSA is the primary federal agency responsible for ensuring access to health care services for people who are uninsured, isolated, or medically vulnerable, including those living with HIV/AIDS, mothers and children, and those living in rural areas." We used the HRSA\'s Area Health Resource File to get data on health professionals and hospitals in counties.',
-            style = "font-size:14px; color:#333333; margin-top:5px;")
-        )
-      ),
-      
-      hr(),
-      
-      #hrsa
-      div(
-        style = "display: flex; align-items: flex-start; gap: 20px;",
-        img(src = "usda_ruc.jpg", height = "100px", style = "flex-shrink:0;"),
-        div(
-          tags$a(
-            "USDA Rural Urban Continuum Codes",
-            href = "https://www.ers.usda.gov/data-products/rural-urban-continuum-codes",
-            target = "_blank",
-            style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
-          ),
-          p('"The 2023 Rural-Urban Continuum Codes distinguish U.S. metropolitan (metro) counties by the population size of their metro area, and nonmetropolitan (nonmetro) counties by their degree of urbanization and adjacency to a metro area. " We used these to classify counties as urban or rural.',
-            style = "font-size:14px; color:#333333; margin-top:5px;")
-        )
-      )
-      
-      
-      
-      
-      
-      
-  )), 
   
 
 # about  -------------------------------------------------------------------
@@ -541,14 +592,14 @@ server <- function(input, output, session) {
   })
   
 
-# data avail dash ---------------------------------------------------------
-
+  # data avail dash ---------------------------------------------------------
+  
   years <- sort(unique(long_data$Year))
   
   selectedDomain <- reactiveVal("All")
   
   
-  # DOMAIN BUTTONS
+  # DOMAIN BUTTONS (static — only depends on long_data, not filtered data)
   
   output$domainButtons <- renderUI({
     
@@ -561,7 +612,7 @@ server <- function(input, output, session) {
         
         tags$button(
           type = "button",
-          class = if (selectedDomain() == d) "domain-btn active" else "domain-btn",
+          class = if (selectedDomain() == d) "btn-primary:focus" else "btn-primary",
           `data-domain` = d,
           onclick = "Shiny.setInputValue('domain_click', this.getAttribute('data-domain'), {priority: 'event'})",
           d
@@ -575,18 +626,60 @@ server <- function(input, output, session) {
   })
   
   
-  # FILTER DATA
+  # STAGE 1 — only recomputes when yearRange changes
   
-  filtered <- reactive({
-    
-    df <- long_data %>%
+  yearFiltered <- reactive({
+    long_data %>%
       mutate(Year = as.integer(Year)) %>%
       filter(
         Year >= input$yearRange[1],
-        Year <= input$yearRange[2],
+        Year <= input$yearRange[2]
+      )
+  })
+  
+  
+  # STAGE 1b — recompute availability dynamically for the SELECTED range
+  # (depends only on yearRange, same invalidation tier as yearFiltered)
+  
+  availabilityRecalc <- reactive({
+    df <- yearFiltered()
+    
+    total_years <- length(unique(df$Year))  # years present in dataset within selected range
+    
+    avail <- df %>%
+      filter(Yearly.County.Coverage.Pct > 0) %>%
+      group_by(Variable.Name) %>%
+      summarise(years_available = n_distinct(Year), .groups = "drop") %>%
+      mutate(
+        Yearly.Availability.Level = case_when(
+          years_available == total_years ~ "Full Availability",
+          years_available >= total_years/2   ~ "Partial Availability",
+          TRUE                            ~ "Very Little Availability"
+        )
+      ) %>%
+      select(Variable.Name, Yearly.Availability.Level)
+    
+    df %>%
+      select(-Yearly.Availability.Level) %>%   # drop the stale precomputed column
+      left_join(avail, by = "Variable.Name")
+  })
+  
+  
+  # STAGE 2 — only recomputes when availability/coverage change
+  
+  levelFiltered <- reactive({
+    availabilityRecalc() %>%
+      filter(
         Yearly.Availability.Level %in% input$availability,
         Global.County.Coverage.Level %in% input$coverage
       )
+  })
+  
+  
+  # STAGE 3 — only recomputes when domain selection changes
+  
+  filtered <- reactive({
+    df <- levelFiltered()
     
     if (selectedDomain() != "All") {
       df <- df %>% filter(Domain == selectedDomain())
@@ -595,21 +688,73 @@ server <- function(input, output, session) {
     df
   })
   
+  # STAGE 4 — text search, applied after domain filtering.
+  # Matches Variable.Name OR Variable.Label, case-insensitive.
+  # Only recomputes when input$varSearch or filtered() changes.
+  
+  searched <- reactive({
+    df <- filtered()
+    
+    query <- trimws(input$varSearch)
+    
+    if (nzchar(query)) {
+      df <- df %>%
+        filter(
+          grepl(query, Variable.Name, ignore.case = TRUE) |
+            grepl(query, Variable.Label, ignore.case = TRUE)
+        )
+    }
+    
+    df
+  })
+  
+  # LOOKUP TABLE — built once per `filtered()` change, not once per cell.
+  # Hashed by "Variable.Name|Year" for O(1) access instead of a dplyr scan
+  # per cell. This is the piece that replaces the nested filter() calls.
+  
+  cellLookup <- reactive({
+    df <- searched()
+    
+    pct <- suppressWarnings(as.numeric(df$Yearly.County.Coverage.Pct))
+    
+    list(
+      pct    = setNames(pct, paste(df$Variable.Name, df$Year, sep = "|")),
+      active = setNames(df$Active.Counties, paste(df$Variable.Name, df$Year, sep = "|"))
+    )
+  })
+  
+  
+  # Helper: map a coverage pct -> color. Pulled out so it's not redefined
+  # inside the render loop on every call.
+  
+  pctToColor <- function(pct) {
+    if (is.na(pct)) return("#9e9e9e")
+    if (pct == 0) return("#9e9e9e")
+    if (pct >= 70) return("#2e7d32")
+    if (pct >= 50) return("#fbc02d")
+    "#c62828"
+  }
+  
   
   # MAIN EXPLORER
   
   output$explorer <- renderUI({
     
-    df <- filtered()
+    df  <- searched()
+    lk  <- cellLookup()
     yrs <- sort(unique(df$Year))
     
     domains <- sort(unique(df$Domain))
     
+    # split once, instead of re-filtering by Domain/Topic inside nested lapply
+    dom_split <- split(df, df$Domain)
+    
     lapply(domains, function(dom) {
       
-      dom_df <- df %>% filter(Domain == dom)
+      dom_df <- dom_split[[dom]]
       
       topics <- sort(unique(dom_df$Topic))
+      topic_split <- split(dom_df, dom_df$Topic)
       
       tags$div(
         
@@ -617,7 +762,7 @@ server <- function(input, output, session) {
         
         lapply(topics, function(tp) {
           
-          tp_df <- dom_df %>% filter(Topic == tp)
+          tp_df <- topic_split[[tp]]
           
           vars <- tp_df %>%
             distinct(Variable.Name, Variable.Label) %>%
@@ -633,7 +778,7 @@ server <- function(input, output, session) {
               # HEADER ROW
               tags$div(
                 class = "header-row",
-                tags$div(style="width:240px; min-width:240px;", "Variable"),
+                tags$div(style = "width:240px; min-width:240px;", "Variable"),
                 lapply(yrs, function(y) {
                   tags$div(class = "year-label", y)
                 })
@@ -642,43 +787,31 @@ server <- function(input, output, session) {
               # VARIABLE ROWS
               lapply(seq_len(nrow(vars)), function(i) {
                 
-                v <- vars$Variable.Name[i]
+                v      <- vars$Variable.Name[i]
                 vlabel <- vars$Variable.Label[i]
-                
-                vdf <- tp_df %>% filter(Variable.Name == v)
                 
                 tags$div(
                   class = "row",
                   
                   tags$div(
-                    class="var-name",
+                    class = "var-name",
                     v
                   ),
                   
                   lapply(yrs, function(y) {
                     
-                    cell <- vdf %>% filter(Year == y)
+                    key    <- paste(v, y, sep = "|")
+                    na_val <- unname(lk$pct[key])      # NA if not found
                     
-                    if (nrow(cell) == 0) {
-                      col <- "#9e9e9e"
-                      na_val <- NA
-                    } else {
-                      na_val <- suppressWarnings(as.numeric(cell$Yearly.County.Coverage.Pct[1]))
-                      col <- if (na_val == 0) {
-                        "#9e9e9e"
-                      } else if (na_val >= 70) {
-                        "#2e7d32"
-                      } else if (na_val >= 50) {
-                        "#fbc02d"
-                      } else {
-                        "#c62828"
-                      }
-                    }
+                    col <- pctToColor(na_val)
                     
                     tags$div(
                       class = "year-cell",
                       style = paste0("background:", col, ";"),
-                      title = paste0(vlabel, " — ", y, ": ", ifelse(is.na(na_val), "no data", paste0(na_val, "% available"))),
+                      title = paste0(
+                        vlabel, " — ", y, ": ",
+                        ifelse(is.na(na_val), "no data", paste0(na_val, "% available"))
+                      ),
                       onclick = "Shiny.setInputValue('clicked_var', this.getAttribute('data-var'), {priority: 'event'})",
                       `data-var` = v
                     )
@@ -723,7 +856,7 @@ server <- function(input, output, session) {
       easyClose = TRUE,
       size = "l"
     ))
-  })  
+  })
   
   
 } #end server
