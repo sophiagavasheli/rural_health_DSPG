@@ -1,4 +1,4 @@
-# cleaning and joining CLH and FCC codebooks
+# cleaning and joining CLH and fcc_cdc codebooks
 
 library(readxl)
 library(dplyr)
@@ -93,9 +93,9 @@ wide_codebook <- master_codebook |>
   
 #write.csv(wide_codebook, "reference/CLH_master_codebook.csv", row.names = FALSE)
 
-fcc = read.csv("reference/fcc_codebook.csv")
+fcc_cdc = read.csv("reference/FCC_CDCW_codebook.csv")
 
-fcc = fcc %>% 
+fcc_cdc = fcc_cdc %>% 
   rename(
     `Variable Name` = Variable.Name,
     `Variable Label` = Variable.Label,
@@ -104,7 +104,7 @@ fcc = fcc %>%
   )
 
 final = bind_rows(
-  fcc,
+  fcc_cdc,
   wide_codebook
 )
   

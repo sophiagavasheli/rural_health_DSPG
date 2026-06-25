@@ -5,4 +5,4 @@
 .DS_Store
 .positai
 *.bash
-shiny_dashboard/clean_FCC_CLH_data.csv
+shiny_dashboard/clean_ALL_data.csv
