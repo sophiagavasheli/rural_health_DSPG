@@ -6,6 +6,7 @@ library(stringr)
 library(tidyr)
 
 fcc = read.csv("data/outcome/FCC_form477/clean_FCC_form477_2009_2023.csv")
+mort = read.csv("data/outcome/CDC_WONDER/clean_mortality_2009_2023.csv")
 
 # get all CLH xlsx files in folder
 files <- list.files(
