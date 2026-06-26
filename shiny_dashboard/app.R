@@ -17,15 +17,28 @@ library(viridis)
 # map
 options(tigris_use_cache = TRUE)
 
-counties_sf <- counties(cb = TRUE, year = 2022, class = "sf")
+va_counties_sf <- counties(cb = TRUE, year = 2022, class = "sf", state = "51")
 
-counties_sf <- counties_sf %>%
-  mutate(GEOID = as.numeric(GEOID))
+va_counties_sf <- va_counties_sf %>%
+  mutate(GEOID = as.numeric(GEOID)) %>% 
+  mutate(COUNTYFP = as.character(COUNTYFP))
 
-counties_sf <- st_transform(counties_sf, 4326)
+va_counties_sf <- st_transform(va_counties_sf, 4326)
 
+drive_times = read.csv("drive_map_dat.csv")
+drive_times$COUNTYFP = as.character(drive_times$COUNTYFP)
+drive_times = drive_times %>% 
+  mutate(COUNTYFP = stringr::str_pad(COUNTYFP, 3, pad = "0"))
 
+hosps = read.csv("hosps.csv")
+va_hosps = hosps %>% 
+  st_as_sf(coords = c('lon', 'lat'), crs = 4326) %>% 
+  filter(state == "VA")
 
+va_centers = read.csv("va_centers.csv")
+va_centers <- st_as_sf(va_centers, coords = c('LONGITUDE', 'LATITUDE'), crs = 4326)
+
+#dashboard data
 long_data <- read.csv("dashboard_data.csv", stringsAsFactors = FALSE, check.names = FALSE)
 
 years <- 2009:2023
@@ -495,13 +508,14 @@ tabPanel(
   "Maps",
   sidebarLayout(
     sidebarPanel(
-      p("future input")
+      helpText("Counties colored by average drive time to nearest hospital.")
     ),
     
     mainPanel(
-      p("future map")
-      
+      leafletOutput("map", height = "800px"),
+      leafletOutput("centers", height = "800px")
     )
+    
   )
 ), 
 
@@ -553,7 +567,72 @@ server <- function(input, output, session) {
   
 
 # map ---------------------------------------------------------------------
-
+  counties_map <- va_counties_sf %>%
+    left_join(drive_times, by = c("COUNTYFP" = "COUNTYFP"))
+  
+  pal <- colorBin(
+    palette = "YlOrRd",
+    domain = counties_map$avg_drive_time_minutes,
+    bins = c(0, 15, 30, 45, 60, 90, 120, Inf),
+    na.color = "gray90"
+  )
+  
+  output$map <- renderLeaflet({
+    
+    leaflet() %>%
+      addProviderTiles(providers$CartoDB.Positron) %>%
+      
+      # Counties layer
+      addPolygons(
+        data = counties_map,
+        fillColor = ~pal(avg_drive_time_minutes),
+        fillOpacity = 0.7,
+        color = "white",
+        weight = 0.5,
+        popup = ~paste0(
+          "<b>County:</b> ", COUNTYFP, "<br>",
+          "<b>Avg Drive Time:</b> ", round(avg_drive_time_minutes, 1), " min"
+        )
+      ) %>%
+      
+      # Hospitals layer
+      addCircleMarkers(
+        data = va_hosps,
+        radius = 2,
+        color = "navy",
+        fillColor = "navy",
+        fillOpacity = 0.8,
+        popup = ~facility.name
+      ) %>%
+      
+      # Legend
+      addLegend(
+        position = "bottomright",
+        pal = pal,
+        values = counties_map$avg_drive_time_minutes,
+        title = "Avg Drive Time (min)"
+      )
+    
+  })
+  
+  output$centers <- renderLeaflet({
+    
+    leaflet() %>%
+      addProviderTiles(providers$CartoDB.Positron) %>%
+      
+      
+      addCircleMarkers(
+        data = va_centers,
+        radius = 3,
+        fillColor = "maroon",
+        fillOpacity = 0.7,
+        color = "white",
+        weight = 1,
+        popup = ~paste0(
+          "Population: ", POPULATION
+      )
+      )
+  })
   
 
   # data avail dash ---------------------------------------------------------
