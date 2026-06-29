@@ -28,3 +28,4 @@ rural_health_DSPG/
 - `intermediate/` contains scripts for joining and calculating transportation data
 - `analysis/` contains scripts for data analysis
 - `reference/`contains technical documentation for the datasets
+- `archive/` folders contain scripts and data that were not used in the final dashboard
