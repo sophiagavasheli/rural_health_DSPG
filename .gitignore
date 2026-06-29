@@ -6,3 +6,4 @@
 .positai
 *.bash
 shiny_dashboard/clean_ALL_data.csv
+*.osm.pbf
