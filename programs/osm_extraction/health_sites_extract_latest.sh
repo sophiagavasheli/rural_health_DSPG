@@ -1,5 +1,5 @@
 #!/bin/bash
-# script to extract health sites from osm.pbf files
+# script to extract health sites from downloaded most recent osm.pbf files
 
 # required conda environment:
 #conda create -n osm -c conda-forge osmium-tool gdal
@@ -32,7 +32,6 @@ for pbf in "$INPUT_DIR"/*.osm.pbf; do
         nwr/amenity=doctors \
         nwr/amenity=dentist \
         nwr/amenity=nursing_home \
-        --add-metadata=timestamp \
         -o "$TMP_DIR/${state}_health.osm.pbf" \
         --overwrite
 done
@@ -41,7 +40,6 @@ echo "Merging extracted files..."
 
 osmium merge \
     "$TMP_DIR"/*_health.osm.pbf \
-    --add-metadata=timestamp \
     -o "$OUTPUT_PBF" \
     --overwrite
 
