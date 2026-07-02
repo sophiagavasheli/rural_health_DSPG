@@ -16,7 +16,8 @@ ac_dr_times = readRDS("us_acute_hosp_drive_times.rds")
 us_counties = readRDS("us_counties_2023.rds")
 
 ## health sites map
-health_sites = readRDS("clean_health_sites_2023.rds")
+health_sites = readRDS("clean_health_sites_2023.rds") %>% 
+  filter(state_fips == "51")
 
 ## dashboard data
 long_data <- read.csv("dashboard_data.csv", stringsAsFactors = FALSE, check.names = FALSE)
@@ -334,7 +335,7 @@ tabPanel(
     tags$p(
       "The following is a list of data sources used in this project. Please see the ",
       tags$a(href = "https://github.com/sophiagavasheli/rural_health_DSPG", "GitHub", target = "_blank"),
-      " GitHub for more specific details on how the data was collected."
+      " for more specific details on how the data was collected."
     ),
     
     # CLH
@@ -558,7 +559,7 @@ tabPanel(
         selectInput(
           "type_filter",
           "Health site type:",
-          choices = c("All", sort(unique(health_sites$type))),
+          choices = c("All", sort(unique(health_sites$health_site_type))),
           selected = "All"
         )
       ),
@@ -631,8 +632,9 @@ tabPanel(
 server <- function(input, output, session) {
   
 
-# map ---------------------------------------------------------------------
+# maps ---------------------------------------------------------------------
   
+  ## drive time map 
   pal <- colorBin(
     palette = "YlOrRd",
     domain = ac_dr_times$avg_drive_time_minutes,
@@ -644,6 +646,7 @@ server <- function(input, output, session) {
     
     leaflet() %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
+      setView(lng = -80, lat = 37, zoom = 6) %>% 
       
       # Counties layer
       addPolygons(
@@ -668,7 +671,49 @@ server <- function(input, output, session) {
     
   })
   
+  ## health site map
+ 
+  health_site_pal <- colorFactor(
+    viridis::magma(18),
+    health_sites$health_site_type
+  )
   
+  filtered_data <- reactive({
+    if (input$type_filter == "All") {
+      health_sites
+    } else {
+      dplyr::filter(health_sites, health_site_type == input$type_filter)
+    }
+  })
+  
+  output$health_sites_map <- renderLeaflet({
+    
+    health_site_df <- sf::st_transform(filtered_data(), 4326)
+    
+    leaflet(health_site_df) %>%
+      addProviderTiles("CartoDB.Positron") %>%
+      setView(lng = -80, lat = 37, zoom = 6) %>%
+      
+      addCircleMarkers(
+        radius = 4,
+        fillOpacity = 0.7,
+        stroke = FALSE,
+        color = ~health_site_pal(health_site_type),
+        
+        popup = ~paste0(
+          "<b>", health_site_name, "</b><br>",
+          "Type: ", health_site_type, "<br>",
+          "County: ", county
+        )
+      ) %>%
+      
+      addLegend(
+        "bottomright",
+        pal = health_site_pal,
+        values = health_sites$health_site_type,
+        title = "Site type"
+      )
+  })
 
   # data avail dash ---------------------------------------------------------
   
