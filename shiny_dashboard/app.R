@@ -1,9 +1,6 @@
 
 # libraries ---------------------------------------------------------------
 library(shiny)
-library(shinythemes)
-library(shinyjs)
-library(bslib)
 library(leaflet)
 library(tigris)
 library(sf)
@@ -11,34 +8,12 @@ library(dplyr)
 library(viridis)
 
 
-# data loading, etc -------------------------------------------------------
+# data loading -------------------------------------------------------
 
 
-# map
-options(tigris_use_cache = TRUE)
+## map
 
-va_counties_sf <- counties(cb = TRUE, year = 2022, class = "sf", state = "51")
-
-va_counties_sf <- va_counties_sf %>%
-  mutate(GEOID = as.numeric(GEOID)) %>% 
-  mutate(COUNTYFP = as.character(COUNTYFP))
-
-va_counties_sf <- st_transform(va_counties_sf, 4326)
-
-drive_times = read.csv("drive_map_dat.csv")
-drive_times$COUNTYFP = as.character(drive_times$COUNTYFP)
-drive_times = drive_times %>% 
-  mutate(COUNTYFP = stringr::str_pad(COUNTYFP, 3, pad = "0"))
-
-hosps = read.csv("hosps.csv")
-va_hosps = hosps %>% 
-  st_as_sf(coords = c('lon', 'lat'), crs = 4326) %>% 
-  filter(state == "VA")
-
-va_centers = read.csv("va_centers.csv")
-va_centers <- st_as_sf(va_centers, coords = c('LONGITUDE', 'LATITUDE'), crs = 4326)
-
-#dashboard data
+## dashboard data
 long_data <- read.csv("dashboard_data.csv", stringsAsFactors = FALSE, check.names = FALSE)
 
 years <- 2009:2023
@@ -351,6 +326,11 @@ tabPanel(
   "Data Sources",
   fluidPage(
     h1("Primary Sources"),
+    tags$p(
+      "The following is a list of data sources used in this project. Please see the ",
+      tags$a(href = "https://github.com/sophiagavasheli/rural_health_DSPG", "GitHub", target = "_blank"),
+      " GitHub for more specific details on how the data was collected."
+    ),
     
     # CLH
     div(
@@ -388,25 +368,100 @@ tabPanel(
     
     hr(),
     
-    # CMS
+    #wonder
     div(
       style = "display: flex; align-items: flex-start; gap: 20px;",
-      img(src = "cms.png", height = "100px", style = "flex-shrink:0;"),
+      img(src = "cdc.jpg", height = "100px", style = "flex-shrink:0;"),
       div(
         tags$a(
-          "Centers for Medicare & Medicaid Services",
-          href = "https://data.cms.gov/provider-data/archived-data/hospitals",
-          target_ = "_blank",
+          "CDC WONDER",
+          href = "https://wonder.cdc.gov/",
+          target = "_blank",
           style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
         ),
-        p('"The Centers for Medicare and Medicaid Services (CMS) provides health coverage to more than 100 million people through Medicare, Medicaid, the Children’s Health Insurance Program, and the Health Insurance Marketplace. The CMS seeks to strengthen and modernize the Nation’s health care system, to provide access to high quality care and improved health at lower costs." We downloaded a list of hospitals from CMS.',
+        p('"Wide-ranging ONline Data for Epidemiologic Research is an easy-to-use, menu-driven system that makes the information resources of the Centers for Disease Control and Prevention (CDC) available to public health professionals and the public at large. It provides access to a wide array of public health information." We downloaded overall mortality from WONDER.',
           style = "font-size:14px; color:#333333; margin-top:5px;")
       )
     ),
     
     hr(),
+    # osm
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "osm.jpg", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "OpenStreetMap",
+          href = "https://planet.osm.org/planet/full-history/",
+          target = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p(
+          '"OpenStreetMap provides freely accessible map data of roads, buildings, and points of interest worldwide." We used the full-history planet file to extract road and health-related infrastructure data.',
+          style = "font-size:14px; color:#333333; margin-top:5px;"
+        )
+      )
+    ),
     
-    h1("Secondary Sources"),
+    hr(),
+    # unc
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "unc.png", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "UNC Cecil G. Sheps Center",
+          href = "https://www.shepscenter.unc.edu/programs-projects/rural-health/list-of-hospitals-in-the-u-s/",
+          target = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p('"The Sheps Center maintains national datasets on rural health and hospital locations in the United States." We downloaded their national hospital list.',
+          style = "font-size:14px; color:#333333; margin-top:5px;"
+        )
+      )
+    ),
+    
+    hr(),
+    # arc
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "arc.png", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "Appalachian Regional Commission (ARC)",
+          href = "https://www.arc.gov/appalachian-counties-served-by-arc/",
+          target = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p(
+          '"The Appalachian Regional Commission identifies counties within the Appalachian region to support economic development initiatives." We used their official county list for regional classification.',
+          style = "font-size:14px; color:#333333; margin-top:5px;"
+        )
+      )
+    ),
+    
+    hr(),
+    # census
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "census.jpg", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "U.S. Census Bureau",
+          href = "https://www.census.gov/geographies/reference-files/time-series/geo/centers-population.html",
+          target = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p(
+          '"The Census Bureau\'s mission is to serve as the nation\'s leading provider of quality data about its people and economy." We downloaded the census tract population weighted centroids from here.',
+          style = "font-size:14px; color:#333333; margin-top:5px;"
+        )
+      )
+    ),
+    
+    hr(),
+    
+    h1("Other Sources"),
     p("The following sources are just a few that the CLH database is constructed with."),
     
     # ACS
@@ -439,24 +494,6 @@ tabPanel(
           style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
         ),
         p('"PLACES provides health and health-related data using small area estimation for counties, incorporated and census designated places, census tracts, and ZIP Code Tabulation Areas (ZCTAs) across the United States. This project, which started in 2015, is a partnership between CDC, the Robert Wood Johnson Foundation, and the CDC Foundation." ',
-          style = "font-size:14px; color:#333333; margin-top:5px;")
-      )
-    ),
-    
-    hr(),
-    
-    #wonder
-    div(
-      style = "display: flex; align-items: flex-start; gap: 20px;",
-      img(src = "cdc.jpg", height = "100px", style = "flex-shrink:0;"),
-      div(
-        tags$a(
-          "CDC WONDER",
-          href = "https://wonder.cdc.gov/",
-          target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
-        ),
-        p('"Wide-ranging ONline Data for Epidemiologic Research is an easy-to-use, menu-driven system that makes the information resources of the Centers for Disease Control and Prevention (CDC) available to public health professionals and the public at large. It provides access to a wide array of public health information."',
           style = "font-size:14px; color:#333333; margin-top:5px;")
       )
     ),
@@ -508,13 +545,12 @@ tabPanel(
   "Maps",
   sidebarLayout(
     sidebarPanel(
-      helpText("Counties colored by average drive time to nearest hospital.")
+      p("Average drive time to the nearest acute hospital"),
     ),
     
     mainPanel(
-      leafletOutput("map", height = "800px"),
-      leafletOutput("centers", height = "800px")
-    )
+      leafletOutput("map", height = "800px")    
+      )
     
   )
 ), 
@@ -615,24 +651,6 @@ server <- function(input, output, session) {
     
   })
   
-  output$centers <- renderLeaflet({
-    
-    leaflet() %>%
-      addProviderTiles(providers$CartoDB.Positron) %>%
-      
-      
-      addCircleMarkers(
-        data = va_centers,
-        radius = 3,
-        fillColor = "maroon",
-        fillOpacity = 0.7,
-        color = "white",
-        weight = 1,
-        popup = ~paste0(
-          "Population: ", POPULATION
-      )
-      )
-  })
   
 
   # data avail dash ---------------------------------------------------------
