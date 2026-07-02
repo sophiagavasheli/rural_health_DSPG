@@ -60,23 +60,6 @@ geo %>% filter(is.na(lat) | is.na(long))
 
 # preparing all data to calculate hospital drive times
 hosp_sf <- geo %>% st_as_sf(coords = c('long', 'lat'), crs = 4326)
-
-# Load TIGRIS Counties Boundary Dataset
-us_counties <- counties(cb = TRUE, year = 2023, class = "sf") %>% 
-  st_transform(crs = 4326) %>% 
-  filter(as.numeric(COUNTYFP) < 57)
-
-# Load Census Population Centers Dataset
-centers = read.table("https://www2.census.gov/geo/docs/reference/cenpop2020/tract/CenPop2020_Mean_TR.txt", header=TRUE, sep=",")
-
-state = states(cb=TRUE) %>% select(STATEFP, STUSPS)
-
-centers_sf <- centers %>% 
-  filter(as.numeric(COUNTYFP) < 57) %>%
-  mutate(STATEFP = sprintf("%02d", as.integer(STATEFP))) %>%
-  left_join(state, by = c("STATEFP" = "STATEFP")) %>% 
-  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4326) %>% 
-  mutate(COUNTYFP = sprintf("%03d", as.integer(COUNTYFP)))
   
 
 # acute hospitals for analysis
@@ -88,5 +71,3 @@ geo_acute = hosp_sf %>%
 
 saveRDS(hosp_sf, "data/outcome/UNC_shep/clean_UNC_hosps_all_2023.rds")
 saveRDS(geo_acute, "data/outcome/UNC_shep/clean_UNC_hosps_acute_2023.rds")
-saveRDS(us_counties, "data/outcome/census/us_counties_2023.rds")
-saveRDS(centers_sf, "data/outcome/census/clean_pop_centroids_2020.rds")

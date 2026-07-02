@@ -1,8 +1,10 @@
+# combine state level drive times
+
 library(dplyr)
 library(purrr)
 
 files <- list.files(
-    "results",
+    "data/outcome/OSM/drive_times",
     pattern="*.rds",
     full.names=TRUE
 )
@@ -14,11 +16,5 @@ drive_times <- map_dfr(
 
 saveRDS(
     drive_times,
-    "us_drive_times.rds"
-)
-
-write.csv(
-    drive_times,
-    "us_drive_times.csv",
-    row.names=FALSE
+    "data/outcome/OSM/drive_times/us_acute_hosp_drive_times.rds"
 )

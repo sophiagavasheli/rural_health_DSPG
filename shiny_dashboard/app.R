@@ -11,7 +11,12 @@ library(viridis)
 # data loading -------------------------------------------------------
 
 
-## map
+## drive time map
+ac_dr_times = readRDS("us_acute_hosp_drive_times.rds")
+us_counties = readRDS("us_counties_2023.rds")
+
+## health sites map
+health_sites = readRDS("clean_health_sites_2023.rds")
 
 ## dashboard data
 long_data <- read.csv("dashboard_data.csv", stringsAsFactors = FALSE, check.names = FALSE)
@@ -543,15 +548,39 @@ tabPanel(
 # maps -------------------------------------------------------------------
 tabPanel(
   "Maps",
-  sidebarLayout(
+  
+  fluidRow(
+    sidebarLayout(
+      sidebarPanel(
+        p("OSM Health Sites, 2023"),
+        
+        # filter bar
+        selectInput(
+          "type_filter",
+          "Health site type:",
+          choices = c("All", sort(unique(health_sites$type))),
+          selected = "All"
+        )
+      ),
+      
+      mainPanel(
+        leafletOutput("health_sites_map", height = "800px")    
+      )
+      
+    )
+  ),
+  
+  fluidRow(
+    sidebarLayout(
     sidebarPanel(
-      p("Average drive time to the nearest acute hospital"),
+      p("Average drive time to the nearest acute hospital, 2023"),
     ),
     
     mainPanel(
-      leafletOutput("map", height = "800px")    
+      leafletOutput("ac_dr_map", height = "800px")    
       )
     
+  )
   )
 ), 
 
@@ -603,24 +632,22 @@ server <- function(input, output, session) {
   
 
 # map ---------------------------------------------------------------------
-  counties_map <- va_counties_sf %>%
-    left_join(drive_times, by = c("COUNTYFP" = "COUNTYFP"))
   
   pal <- colorBin(
     palette = "YlOrRd",
-    domain = counties_map$avg_drive_time_minutes,
+    domain = ac_dr_times$avg_drive_time_minutes,
     bins = c(0, 15, 30, 45, 60, 90, 120, Inf),
     na.color = "gray90"
   )
   
-  output$map <- renderLeaflet({
+  output$ac_dr_map <- renderLeaflet({
     
     leaflet() %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
       
       # Counties layer
       addPolygons(
-        data = counties_map,
+        data = ac_dr_times,
         fillColor = ~pal(avg_drive_time_minutes),
         fillOpacity = 0.7,
         color = "white",
@@ -631,22 +658,12 @@ server <- function(input, output, session) {
         )
       ) %>%
       
-      # Hospitals layer
-      addCircleMarkers(
-        data = va_hosps,
-        radius = 2,
-        color = "navy",
-        fillColor = "navy",
-        fillOpacity = 0.8,
-        popup = ~facility.name
-      ) %>%
-      
       # Legend
       addLegend(
         position = "bottomright",
         pal = pal,
-        values = counties_map$avg_drive_time_minutes,
-        title = "Avg Drive Time (min)"
+        values = ac_dr_times$avg_drive_time_minutes,
+        title = "Average Drive Time (min)"
       )
     
   })
