@@ -73,7 +73,7 @@ health_sites = readRDS("clean_health_sites_2023.rds") %>%
 
 
 ## dashboard data
-long_data <- read.csv("dashboard_data.csv", stringsAsFactors = FALSE, check.names = FALSE)
+long_data <- readRDS("dashboard_data.rds")
 
 years <- 2009:2023
 
