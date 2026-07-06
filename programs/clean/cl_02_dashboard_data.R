@@ -4,13 +4,16 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 
-actual_data <- read.csv("shiny_dashboard/clean_ALL_data.csv")
+actual_data <- readRDS("shiny_dashboard/clean_ALL_data.rds")
 codebook <- read.csv("reference/all_codebook.csv")
 
 geo_cols <- c(
   "YEAR", "COUNTYFIPS", "STATEFIPS",
   "STATE", "COUNTY", "REGION", "TERRITORY"
 )
+
+actual_data <- actual_data %>%
+  mutate(across(-all_of(geo_cols), as.numeric))
 
 remove_vars <- c(
   "COUNTY", "COUNTYFIPS", "REGION",
@@ -19,9 +22,8 @@ remove_vars <- c(
 
 total_years <- n_distinct(actual_data$YEAR)
 
-# --------------------------------------------------
+
 # Variable-level yearly coverage
-# --------------------------------------------------
 
 raw_coverage <- actual_data %>%
   pivot_longer(
@@ -46,9 +48,8 @@ raw_coverage <- actual_data %>%
     )
   )
 
-# --------------------------------------------------
+
 # Global summaries across all years
-# --------------------------------------------------
 
 global_summary <- raw_coverage %>%
   group_by(`Variable Name`) %>%
@@ -72,20 +73,17 @@ global_summary <- raw_coverage %>%
     )
   )
 
-# --------------------------------------------------
+
 # Create complete variable-year grid
 # Ensures every variable has every year represented
-# --------------------------------------------------
 
 all_var_years <- expand_grid(
   `Variable Name` = unique(codebook$Variable.Name),
   YEAR = sort(unique(actual_data$YEAR))
 )
 
-# --------------------------------------------------
-# Final dashboard dataset
-# One row = one variable in one year
-# --------------------------------------------------
+
+# Final dashboard dataset, One row = one variable in one year
 
 dashboard_long <- all_var_years %>%
   
@@ -152,12 +150,5 @@ dashboard_long <- all_var_years %>%
     Year
   )
 
-# --------------------------------------------------
-# Export
-# --------------------------------------------------
+saveRDS(dashboard_long, "shiny_dashboard/dashboard_data.rds")
 
-write.csv(
-  dashboard_long,
-  "shiny_dashboard/dashboard_data.csv",
-  row.names = FALSE
-)

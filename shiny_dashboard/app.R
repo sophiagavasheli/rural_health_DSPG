@@ -10,14 +10,67 @@ library(viridis)
 
 # data loading -------------------------------------------------------
 
+## va health
+va_map = readRDS("va_health.rds")
+
+va_map_choices = c(
+  "Years of Potential Life Lost" = "CHR_YRS_LIFE_LOST",
+  "Diabetes (%)" = "CHR_PCT_DIABETES",
+  "Low Birth Weight (%)" = "CHR_PCT_LOW_BIRTH_WT",
+  "Premature Death Rate" = "CHR_PREMAT_DEATH_RATE",
+  "Adult Obesity (%)" = "CHR_PCT_ADULT_OBESITY",
+  "Alcohol Driving Deaths (%)" = "CHR_PCT_ALCOHOL_DRIV_DEATH",
+  "Crude Death Rate" = "CDCW_crude_death_rate",
+  "Depression (%)" = "CDCP_DEPRESSION_ADULT_C",
+  "Hospital Beds Rate" = "AHRF_HOSP_BED_RATE",
+  "Hospitals Rate" = "AHRF_HOSPS_RATE",
+  "Obstetric Hospitals Rate" = "POS_HOSP_OBSTETRIC_RATE",
+  "OB/GYN Provider Rate" = "AHRF_OB_GYN_RATE",
+  "Medical Specialists Rate" = "AHRF_MED_SPEC_RATE",
+  "Alcohol Treatment Hospital Rate" = "POS_HOSP_ALC_RATE",
+  "Cardiology Specialists Rate" = "AHRF_CARDIOVAS_SPEC_RATE",
+  "Drive to Work (%)" = "ACS_PCT_DRIVE_2WORK",
+  "Public Transit to Work (%)" = "ACS_PCT_PUBL_TRANSIT",
+  "Mental Health Provider Rate" = "CHR_MENTAL_PROV_RATE",
+  "10 Mbps Household Broadband Connections" = "FCC_res_connections_10_mbps",
+  "All Broadband Connections" = "FCC_county_all_connections"
+)
 
 ## drive time map
 ac_dr_times = readRDS("us_acute_hosp_drive_times.rds")
 us_counties = readRDS("us_counties_2023.rds")
 
 ## health sites map
+
+health_site_labels <- c(
+  hospital = "Hospital",
+  clinic = "Clinic",
+  doctors_general = "General Doctors",
+  dentist = "Dentist",
+  pharmacy = "Pharmacy",
+  mental_health = "Mental Health",
+  nursing_home = "Nursing Home",
+  vision = "Vision Care",
+  rehab = "Rehabilitation",
+  diagnostics = "Diagnostics",
+  first_aid_emergency = "Emergency & First Aid",
+  kidney_care = "Kidney Care",
+  specialists_cancer = "Cancer Specialists",
+  specialists_medical_surgery = "Medical & Surgical Specialists",
+  specialists_musculoskeletal_pain = "Musculoskeletal & Pain Specialists",
+  specialists_reproductive = "Reproductive Specialists",
+  specialists_aesthetic = "Aesthetic Specialists",
+  other_healthcare = "Other Healthcare"
+)
+
+
 health_sites = readRDS("clean_health_sites_2023.rds") %>% 
-  filter(state_fips == "51")
+  filter(state_fips == "51") %>% 
+  mutate(
+    health_site_label = health_site_labels[health_site_type]
+  )
+
+
 
 ## dashboard data
 long_data <- read.csv("dashboard_data.csv", stringsAsFactors = FALSE, check.names = FALSE)
@@ -553,13 +606,31 @@ tabPanel(
   fluidRow(
     sidebarLayout(
       sidebarPanel(
+        p("Health Outcomes and Infrastructure, 2022"),
+        
+        selectInput(
+          "variable",
+          "Variable",
+          choices = va_map_choices
+        )
+      ),
+      mainPanel(
+        leafletOutput("va_health", height = "800px") 
+      )
+      
+    )
+  ),
+  
+  fluidRow(
+    sidebarLayout(
+      sidebarPanel(
         p("OSM Health Sites, 2023"),
         
         # filter bar
         selectInput(
           "type_filter",
           "Health site type:",
-          choices = c("All", sort(unique(health_sites$health_site_type))),
+          choices = c("All", sort(unique(health_sites$health_site_label))),
           selected = "All"
         )
       ),
@@ -634,6 +705,50 @@ server <- function(input, output, session) {
 
 # maps ---------------------------------------------------------------------
   
+  ## va health map
+  output$va_health <- renderLeaflet({
+    
+    vals <- va_map[[input$variable]]
+    
+    pal <- colorNumeric(
+      palette = "viridis",
+      domain = vals,
+      na.color = "lightgray"
+    )
+    
+    leaflet(data = va_map) %>%
+      addProviderTiles(providers$CartoDB.Positron) %>%
+      setView(lng = -80, lat = 37, zoom = 6) %>% 
+      
+      addPolygons(
+        fillColor = ~pal(vals),
+        fillOpacity = 0.8,
+        color = "white",
+        weight = 1,
+        smoothFactor = 0.2,
+        label = ~paste0(
+          COUNTY,
+          "<br>",
+          "Value",
+          ": ",
+          round(vals, 2)
+        ) |>
+          lapply(htmltools::HTML),
+        highlightOptions = highlightOptions(
+          weight = 2,
+          color = "black",
+          bringToFront = TRUE
+        )
+      ) %>%
+      addLegend(
+        pal = pal,
+        values = vals,
+        title = "Value",
+        position = "bottomright"
+      )
+  })
+  
+  
   ## drive time map 
   pal <- colorBin(
     palette = "YlOrRd",
@@ -656,7 +771,7 @@ server <- function(input, output, session) {
         color = "white",
         weight = 0.5,
         popup = ~paste0(
-          "<b>County:</b> ", COUNTYFP, "<br>",
+          "<b>County:</b> ", NAME, "<br>",
           "<b>Avg Drive Time:</b> ", round(avg_drive_time_minutes, 1), " min"
         )
       ) %>%
@@ -675,14 +790,14 @@ server <- function(input, output, session) {
  
   health_site_pal <- colorFactor(
     viridis::magma(18),
-    health_sites$health_site_type
+    health_sites$health_site_label
   )
   
   filtered_data <- reactive({
     if (input$type_filter == "All") {
       health_sites
     } else {
-      dplyr::filter(health_sites, health_site_type == input$type_filter)
+      dplyr::filter(health_sites, health_site_label == input$type_filter)
     }
   })
   
@@ -698,11 +813,11 @@ server <- function(input, output, session) {
         radius = 4,
         fillOpacity = 0.7,
         stroke = FALSE,
-        color = ~health_site_pal(health_site_type),
+        color = ~health_site_pal(health_site_label),
         
         popup = ~paste0(
           "<b>", health_site_name, "</b><br>",
-          "Type: ", health_site_type, "<br>",
+          "Type: ", health_site_label, "<br>",
           "County: ", county
         )
       ) %>%
@@ -710,7 +825,7 @@ server <- function(input, output, session) {
       addLegend(
         "bottomright",
         pal = health_site_pal,
-        values = health_sites$health_site_type,
+        values = health_sites$health_site_label,
         title = "Site type"
       )
   })
