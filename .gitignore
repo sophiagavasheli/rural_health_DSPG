@@ -5,6 +5,6 @@
 .DS_Store
 .positai
 *.bash
-shiny_dashboard/clean_ALL_data.csv
+data/analysis/clean_ALL_data.csv
 *.osm.pbf
 data/outcome/OSM/OSM_states_2023

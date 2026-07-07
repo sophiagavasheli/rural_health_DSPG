@@ -14,8 +14,6 @@ clean_2014 = form2014 %>%
   #convert to UTF characters
   mutate(County_Name = iconv(County_Name, from = "",to = "UTF-8",sub = "")) %>% 
   select(-c(State, County)) %>% 
-  #remove the word "County" from counties
-  #mutate(County_Name = gsub(" County", "", County_Name)) %>% 
   #convert state name to state abbreviation
   left_join(states, by = c("State_Name" = "state_name")) %>%
   rename(state = state_abbrev) %>% 
@@ -48,7 +46,9 @@ clean_2008 = form2008 %>%
   rename_with(tolower) %>% 
   select(-c(state_name, housing_units)) %>% 
   #keep more recent month
-  filter(month == 12) %>% 
+  group_by(fips, year) %>%
+  slice_max(order_by = month, n = 1, with_ties = FALSE) %>%
+  ungroup() %>% 
   select(-month) %>% 
   rename(
     FCC_res_connections_200_kbps = tier_1,
@@ -62,22 +62,24 @@ clean_2008 = form2008 %>%
 conn = read.csv(here("data", "source", "FCC", "FCC_form477_county_connections2009_2025.csv"))
 
 clean_conn  = conn %>% 
-  #convert state name to state abbreviation
-  left_join(states, by = c("statename" = "state_name")) %>%
-  rename(state = state_abbrev) %>% 
-  #all col names to lower case
+  # all col names to lower case
   rename_with(tolower) %>% 
-  select(-c(statename)) %>% 
-  #keep more recent month
-  filter(month == 12) %>% 
+  select(-c(statename, countyname)) %>% 
+  filter(year <= 2023) %>%
+  # keep most recent month for each county-year
+  group_by(countycode, year) %>%
+  slice_max(order_by = month, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
   select(-month) %>% 
-  rename(county_name = countyname, fips = countycode) %>% 
-  filter(year <= 2023) %>% 
-  mutate(across(where(is.numeric), ~ na_if(., -9999))) %>% 
+  mutate(
+    across(where(is.numeric), ~ na_if(., -9999)),
+    countycode = sprintf("%05d", as.integer(countycode))
+  ) %>% 
   rename(
     FCC_county_consumer_connections = consumer,
     FCC_county_non_consumer_connections = non_consumer,
-    FCC_county_all_connections = all 
+    FCC_county_all_connections = all,
+    fips = countycode
   )
 
 
@@ -87,11 +89,11 @@ all <- bind_rows(
 )
 
 all <- all %>%
-  mutate(across(where(is.numeric), ~ na_if(., -999)))
+  mutate(across(where(is.numeric), ~ na_if(., -999))) %>% 
+  mutate(fips = sprintf("%05d", as.integer(fips)))
 
 joined = left_join(all, clean_conn, 
-                   by = c("fips" = "fips", "county_name" = "county_name", 
-                          "year" = "year", "state" = "state"))
+                   by = c("fips" = "fips", "year" = "year"))
 
 
-write.csv(joined, "data/outcome/FCC_form477/clean_FCC_form477_2009_2023.csv", row.names = FALSE)
+write.csv(joined, "data/outcome/FCC/clean_FCC_form477_2009_2023.csv", row.names = FALSE)

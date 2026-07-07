@@ -3,9 +3,9 @@
 library(dplyr)
 
 mort1 = read.csv("data/source/CDC_WONDER/mortality_2009_2017.csv", 
-                 na.strings = c("Suppressed", "Unreliable"))
+                 na.strings = c("Suppressed", "Unreliable", "Not Available", "Missing"))
 mort2 = read.csv("data/source/CDC_WONDER/mortality_2018_2023.csv", 
-                 na.strings = c("Suppressed", "Unreliable"))
+                 na.strings = c("Suppressed", "Unreliable", "Not Available", "Missing"))
 
 clmort1 = mort1 %>% 
   select(County.Code, Year, Crude.Rate) %>% 

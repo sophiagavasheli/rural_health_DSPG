@@ -5,20 +5,23 @@ library(readxl)
 
 clh = readRDS("data/outcome/CLH/clean_clh_2009_2023.rds")
 app = read_excel("data/source/ARC/appalachian_counties.xlsx", skip = 4)
-fcc = read.csv("data/outcome/FCC_form477/clean_FCC_form477_2009_2023.csv")
+fcc = read.csv("data/outcome/FCC/clean_FCC_form477_2009_2023.csv")
 mort = read.csv("data/outcome/CDC_WONDER/clean_mortality_2009_2023.csv")
+
+clh = clh %>% 
+  mutate(COUNTYFIPS = sprintf("%05d", as.integer(COUNTYFIPS)))
 
 app = app %>% 
   filter(!is.na(STATE)) %>%  #remove empty rows
-  mutate(FIPS = sprintf("%05s", FIPS))
+  mutate(FIPS = sprintf("%05d", as.integer(FIPS)))
 
 fcc = fcc %>% 
   select(-county_name, -state) %>% 
-  mutate(fips = sprintf("%05s", fips))
-
+  mutate(fips = sprintf("%05d", as.integer(fips))) 
+  
 mort = mort %>% 
   mutate(fips =  as.character(fips)) %>% 
-  mutate(fips = sprintf("%05s", fips)) %>% 
+  mutate(fips = sprintf("%05d", as.integer(fips))) %>% 
   mutate(CDCW_crude_death_rate = as.numeric(CDCW_crude_death_rate))
 
 #anti_join(fcc, clh, by = c("year" = "YEAR", "fips" = "COUNTYFIPS")) %>% View()
@@ -33,6 +36,6 @@ final = clh %>%
   # assign 1 if appalachia, 0 if not
   mutate(ARC_appalachia_indicator = if_else(COUNTYFIPS %in% app$FIPS, 1L, 0L))
 
-write.csv(final, "shiny_dashboard/clean_ALL_data.csv", row.names = FALSE)
-saveRDS(final, "shiny_dashboard/clean_ALL_data.rds")
+write.csv(final, "data/analysis/clean_ALL_data.csv", row.names = FALSE)
+saveRDS(final, "data/analysis/clean_ALL_data.rds")
 

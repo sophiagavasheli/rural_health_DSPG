@@ -4,7 +4,7 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 
-actual_data <- readRDS("shiny_dashboard/clean_ALL_data.rds")
+actual_data <- readRDS("data/analysis/clean_ALL_data.rds")
 codebook <- read.csv("reference/all_codebook.csv")
 
 geo_cols <- c(

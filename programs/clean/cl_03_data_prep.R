@@ -4,15 +4,15 @@ library(dplyr)
 library(tigris)
 library(sf)
 
-dat <- readRDS("shiny_dashboard/clean_ALL_data.rds")
+dat <- readRDS("data/analysis/clean_ALL_data.rds")
 dash = readRDS("shiny_dashboard/dashboard_data.rds")
 
+# random forest data prep
 predictor_topics = c("People", "Income", "Attainment", "Health insurance status", 
            "Characteristics of health care providers", 
            "Characteristics of health care facilities", "Broadband Adoption",
            "Transportation")
 
-# random forest data prep
 rf_keep = dash %>% 
   filter(Topic %in% predictor_topics | Variable.Name == "USDA_rural_indicator_2013") %>% 
   filter(Global.County.Coverage.Level == "Mostly Full Coverage")
@@ -20,18 +20,18 @@ rf_keep = dash %>%
 rf_predictors = unique(rf_keep$Variable.Name)
 
 rf_dat_pred = dat %>% 
-  select(YEAR, COUNTYFIPS, rf_predictors) %>% 
+  select(YEAR, COUNTYFIPS, all_of(rf_predictors)) %>% 
+  select(YEAR, COUNTYFIPS, where(is.numeric)) %>% 
   filter(YEAR > 2009 & YEAR < 2022)
 
-saveRDS(rf_dat_pred, "data/random_forest_predictor_dat.rds_2010_2021")
+saveRDS(rf_dat_pred, "data/analysis/random_forest_predictor_dat.rds_2010_2021")
 
-health_outcomes = c("CDCA_STROKE_HOSP_RATE_ABOVE65", "CDCA_STROKE_DTH_RATE_ABOVE35", "CDCAP_HIVDIAG_RATE_ABOVE13", "CDCW_SELFHARM_DTH_RATE", "CDCW_INJURY_DTH_RATE", "CDCW_crude_death_rate", "CDCA_HEART_HOSP_RATE_ABOVE65", "CDCA_HEART_DTH_RATE_ABOVE35", "CHR_PCT_ADULT_OBESITY", "CHR_PCT_LOW_BIRTH_WT", "CHR_PCT_ALCOHOL_DRIV_DEATH", "CHR_PCT_DIABETES")
 
 rf_dat_outcome = dat %>% 
-  select(YEAR, COUNTYFIPS, health_outcomes) %>% 
+  select(YEAR, COUNTYFIPS, CDCA_HEART_DTH_RATE_ABOVE35, CDCW_crude_death_rate, CDCW_INJURY_DTH_RATE, CDCW_SELFHARM_DTH_RATE, CDCAP_HIVDIAG_RATE_ABOVE13, CDCA_STROKE_DTH_RATE_ABOVE35) %>% 
   filter(YEAR > 2009 & YEAR < 2022)
 
-saveRDS(rf_dat_outcome, "data/random_forest_outcome_dat.rds_2010_2021")
+saveRDS(rf_dat_outcome, "data/analysis/random_forest_outcome_dat.rds_2010_2021")
 
 # future dashboard map
 cons = counties(year = 2023, cb = TRUE) %>%
