@@ -2,12 +2,12 @@
 # OSRM DRIVE TIME: CALIFORNIA ONLY
 # ============================================================
 
-  library(tigris)
-  library(dplyr)
-  library(osrm)
-  library(sf)
-  library(stringr)
-  library(tidyr)
+library(tigris)
+library(dplyr)
+library(osrm)
+library(sf)
+library(stringr)
+library(tidyr)
 
 
 setwd(here::here())
@@ -56,6 +56,7 @@ state_hosps <- st_transform(state_hosps, 4326)
 
 data_dir <- here::here("data/outcome/OSM/OSM_states_2023")
 data_dir_clean <- normalizePath(data_dir, winslash = "/", mustWork = TRUE)
+pbf_file <- paste0(state_full_name, ".osm.pbf")
 
 container_name <- paste0("osrm_", state_full_name)
 
@@ -73,36 +74,42 @@ if (length(check_container) > 0) {
   
 } else {
   
-  message("Building OSRM from scratch for California...")
+  message("No existing container found. Constructing OSRM maps from scratch...")
   
-  # STEP 1
-  system(paste0(
-    "docker run --rm -v ", data_dir_clean, ":/data ",
-    "osrm/osrm-backend osrm-extract -p /usr/local/share/osrm/profiles/car.lua /data/",
-    state_full_name, ".osm.pbf"
-  ))
+  message("=== Step 1: Extracting OSRM Profile ===")
+  cmd_extract <- paste0(
+    "docker run --rm -v ", data_dir_clean, ":/data",
+    " osrm/osrm-backend osrm-extract -p /usr/local/share/osrm/profiles/car.lua /data/", pbf_file
+  )
+  system(cmd_extract)
   
-  # STEP 2
-  system(paste0(
-    "docker run --rm -v ", data_dir_clean, ":/data ",
-    "osrm/osrm-backend osrm-partition /data/", state_full_name, ".osrm"
-  ))
+  message("=== Step 2: Partitioning OSRM Data ===")
+  cmd_partition <- paste0(
+    "docker run --rm -v ", data_dir_clean, ":/data",
+    " osrm/osrm-backend osrm-partition /data/", state_full_name, ".osrm"
+  )
+  system(cmd_partition)
   
-  # STEP 3
-  system(paste0(
-    "docker run --rm -v ", data_dir_clean, ":/data ",
-    "osrm/osrm-backend osrm-customize /data/", state_full_name, ".osrm"
-  ))
+  message("=== Step 3: Customizing OSRM Data ===")
+  cmd_customize <- paste0(
+    "docker run --rm -v ", data_dir_clean, ":/data",
+    " osrm/osrm-backend osrm-customize /data/", state_full_name, ".osrm"
+  )
+  system(cmd_customize)
   
-  # STEP 4
-  exit_code <- system(paste0(
+  message(paste("=== Step 4: Launching OSRM Server for", state_full_name, "==="))
+  cmd_launch <- paste0(
     "docker run -d --name ", container_name,
-    " -p 5000:5000 -v ", data_dir_clean, ":/data ",
-    "osrm/osrm-backend osrm-routed --algorithm mld /data/",
+    " -p 5000:5000 -v ", data_dir_clean, ":/data",
+    " osrm/osrm-backend osrm-routed --algorithm mld --max-table-size 100000 /data/",
     state_full_name, ".osrm"
-  ))
+  )
+  exit_code <- system(cmd_launch)
   
-  if (exit_code != 0) stop("Failed to start OSRM container")
+  if (exit_code != 0) {
+    message("Docker failed to launch the OSRM server. Skipping state.")
+    return(invisible(NULL))
+  }
   
   message("Waiting for OSRM server warm-up (60 seconds)...")
   Sys.sleep(60)
