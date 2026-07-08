@@ -1,4 +1,6 @@
 # Calculating the drive time to the nearest acute hospital for ALL states using 2023 OSM roads and hospitals
+# this is to run the calculations locally compared to the scripts in the intermediate folder which do this in VT ARC
+
 # make sure you have the state.osm.pbf files in the correct directory generated with cl_01_OSM_state_pbfs.sh
 
 # Load libraries silently for CLI clean output
@@ -16,7 +18,7 @@ suppressPackageStartupMessages({
 setwd(here::here())
 
 # 1. LOAD SOURCE DATASETS
-us_counties = readRDS("data/outcome/census/us_counties_2023.rds") %>% st_as_sf()
+us_counties = readRDS("data/outcome/census/us_counties_2020.rds") %>% st_as_sf()
 hosp_sf = readRDS("data/outcome/UNC_shep/clean_UNC_hosps_acute_2023.rds") %>% st_as_sf()
 centers_sf = readRDS("data/outcome/census/clean_pop_centroids_2020.rds") %>% st_as_sf()
 

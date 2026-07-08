@@ -73,6 +73,6 @@ ogr2ogr \
 
 echo "deduplicating"
 
-python "${BASE}/cl_01_OSM_health_sites_deduplicate.py" "$OUTPUT_GPKG" "${BASE}/us_health_2023_deduplicated.geojson"
+python "${BASE}/OSM_health_sites_deduplicate.py" "$OUTPUT_GPKG" "${BASE}/us_health_2023_deduplicated.geojson"
 
 echo "Done!"
