@@ -92,7 +92,7 @@ injury_dth = rf_model(pred_clean, outcome, 2010, 2023, "CDCW_INJURY_DTH_RATE")
 heart_dth = rf_model(pred_clean, outcome, 2010, 2021, "CDCA_HEART_DTH_RATE_ABOVE35")
 obesity = rf_model(pred_clean, outcome, 2010, 2017, "CHR_PCT_ADULT_OBESITY")
 diabetes = rf_model(pred_clean, outcome, 2010, 2017, "CHR_PCT_DIABETES")
-low_birth = rf_model(pred_clean, outcome, 2010, 2015, "CHR_PCT_LOW_BIRTH_WT")
+low_birth = rf_model(pred_clean, outcome, 2010, 2014, "CHR_PCT_LOW_BIRTH_WT")
 mental = rf_model(pred_clean, outcome, 2014, 2022, "CHR_PCT_MENTAL_DISTRESS")
 alc_drv_death = rf_model(pred_clean, outcome, 2012, 2022, "CHR_PCT_ALCOHOL_DRIV_DEATH")
 

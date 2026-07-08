@@ -1,16 +1,27 @@
-# random forest models
+# random forest model plots
 
-library(grf)
+
 library(dplyr)
-library(randomForest)
-library(purrr)
 library(ggplot2)
 
 #models
 load("data/analysis/random_forest_models.RData")
 
+var_lookup <- read_csv("reference/all_codebook.csv") %>%
+  select(Variable.Name, Variable.Label)
+
 plot_importance <- function(importance_df, title, start_yr, end_yr) {
-  p = importance_df %>%
+  
+  importance_df <- importance_df %>%
+    left_join(
+      var_lookup,
+      by = c("variable" = "Variable.Name")
+    ) %>%
+    mutate(
+      variable = coalesce(Variable.label, variable)
+    )
+  
+  p <- importance_df %>%
     slice_max(importance, n = 20) %>%
     ggplot(
       aes(
@@ -19,7 +30,7 @@ plot_importance <- function(importance_df, title, start_yr, end_yr) {
       )
     ) +
     geom_col(fill = "maroon") +
-    coord_flip() + 
+    coord_flip() +
     labs(
       title = paste("Top 20 Variable Importance for", title),
       x = "Predictor Variable",
@@ -27,8 +38,10 @@ plot_importance <- function(importance_df, title, start_yr, end_yr) {
       caption = paste(start_yr, "-", end_yr)
     )
   
-  ggsave(paste0("figures/random_forest/", gsub(" ", "_", title), ".png"),
-         plot = p, width = 10, height = 6, dpi = 300,  bg = "white")
+  ggsave(
+    paste0("figures/random_forest/", gsub(" ", "_", title), ".png"),
+    plot = p,width = 10,height = 6,dpi = 300,bg = "white"
+  )
 }
 
 # plots
@@ -92,7 +105,7 @@ plot_importance(
   low_birth$importance,
   title = "Low Birth Weight Prevalence",
   start_yr = 2010,
-  end_yr = 2015
+  end_yr = 2014
 )
 
 plot_importance(
