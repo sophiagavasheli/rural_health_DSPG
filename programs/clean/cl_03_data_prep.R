@@ -8,7 +8,7 @@ dat <- readRDS("data/analysis/clean_ALL_data.rds")
 dash = readRDS("shiny_dashboard/dashboard_data.rds")
 
 # random forest data prep
-predictor_topics = c("People", "Income", "Attainment", "Health insurance status", 
+predictor_topics = c(#"People", "Income", "Attainment", "Health insurance status", 
            "Characteristics of health care providers", 
            "Characteristics of health care facilities", "Broadband Adoption",
            "Transportation")
@@ -21,38 +21,39 @@ rf_predictors = unique(rf_keep$Variable.Name)
 
 rf_dat_pred = dat %>% 
   select(YEAR, COUNTYFIPS, all_of(rf_predictors)) %>% 
-  select(YEAR, COUNTYFIPS, where(is.numeric)) %>% 
-  filter(YEAR > 2009 & YEAR < 2022)
+  select(YEAR, COUNTYFIPS, USDA_rural_indicator_2013, FCC_res_connections_10_mbps,
+         contains("RATE"), contains("PCT")) %>% 
+  filter(YEAR > 2009)
 
-saveRDS(rf_dat_pred, "data/analysis/random_forest_predictor_dat.rds_2010_2021")
+saveRDS(rf_dat_pred, "data/analysis/random_forest_predictor_dat_2010_2023.rds")
 
 
 rf_dat_outcome = dat %>% 
-  select(YEAR, COUNTYFIPS, CDCA_HEART_DTH_RATE_ABOVE35, CDCW_crude_death_rate, CDCW_INJURY_DTH_RATE, CDCW_SELFHARM_DTH_RATE, CDCAP_HIVDIAG_RATE_ABOVE13, CDCA_STROKE_DTH_RATE_ABOVE35) %>% 
-  filter(YEAR > 2009 & YEAR < 2022)
+  select(YEAR, COUNTYFIPS, CHR_PCT_MENTAL_DISTRESS, CHR_PCT_LOW_BIRTH_WT, CHR_PCT_DIABETES, CHR_PCT_ADULT_OBESITY, CHR_PCT_ALCOHOL_DRIV_DEATH, CDCA_HEART_DTH_RATE_ABOVE35, CDCW_INJURY_DTH_RATE, CDCW_SELFHARM_DTH_RATE, CDCAP_HIVDIAG_RATE_ABOVE13, CDCA_STROKE_DTH_RATE_ABOVE35, CDCW_crude_death_rate) %>% 
+  filter(YEAR > 2009)
 
-saveRDS(rf_dat_outcome, "data/analysis/random_forest_outcome_dat.rds_2010_2021")
+saveRDS(rf_dat_outcome, "data/analysis/random_forest_outcome_dat_2010_2023.rds")
 
 # future dashboard map
-cons = counties(year = 2023, cb = TRUE) %>%
-  select(GEOID, geometry)
-
-keep_vars = dash %>%
-  filter(Year == 2023, Available == 1,
-         Yearly.County.Coverage.Level == "Mostly Full Coverage")
-
-map_vars = unique(keep_vars$Variable.Name)
-
-dat_filt = dat %>%
-  select(YEAR, COUNTYFIPS, COUNTY, map_vars) %>%
-  filter(YEAR == 2023) %>%
-  mutate(COUNTYFIPS = sprintf("%05d", as.numeric(COUNTYFIPS))) %>%
-  left_join(
-    cons,
-    by = c("COUNTYFIPS" = "GEOID")
-  ) %>%
-  st_as_sf() %>% 
-  st_transform(4326)
-
-
-saveRDS(dat_filt, "shiny_dashboard/clean_2023_filtered_dat.rds")
+# cons = counties(year = 2023, cb = TRUE) %>%
+#   select(GEOID, geometry)
+# 
+# keep_vars = dash %>%
+#   filter(Year == 2023, Available == 1,
+#          Yearly.County.Coverage.Level == "Mostly Full Coverage")
+# 
+# map_vars = unique(keep_vars$Variable.Name)
+# 
+# dat_filt = dat %>%
+#   select(YEAR, COUNTYFIPS, COUNTY, all_of(map_vars)) %>%
+#   filter(YEAR == 2023) %>%
+#   mutate(COUNTYFIPS = sprintf("%05d", as.numeric(COUNTYFIPS))) %>%
+#   left_join(
+#     cons,
+#     by = c("COUNTYFIPS" = "GEOID")
+#   ) %>%
+#   st_as_sf() %>% 
+#   st_transform(4326)
+# 
+# 
+# saveRDS(dat_filt, "shiny_dashboard/clean_2023_filtered_dat.rds")

@@ -13,11 +13,10 @@ library(tidyr)
 setwd(here::here())
 
 # 1. LOAD DATA
-us_counties <- readRDS("data/outcome/census/us_counties_2023.rds") %>% st_as_sf()
+us_counties <- readRDS("data/outcome/census/us_counties_2020.rds") %>% st_as_sf()
 hosp_sf <- readRDS("data/outcome/UNC_shep/clean_UNC_hosps_acute_2023.rds") %>% st_as_sf()
 centers_sf <- readRDS("data/outcome/census/clean_pop_centroids_2020.rds") %>% st_as_sf()
 
-# missing TX and CA
 # ============================================================
 # 2. FILTER ONLY 
 # ============================================================
@@ -27,10 +26,10 @@ state_lookup <- tigris::fips_codes %>%
   mutate(state_full_name = state_name %>%
            tolower() %>%
            stringr::str_replace_all(" ", "-")) %>%
-  filter(state == "CA")
+  filter(state == "TX")
 
 state_fips <- state_lookup$state_code[1]
-state_abb  <- "ca"
+state_abb  <- "tx"
 state_full_name <- state_lookup$state_name[1] %>%
   tolower() %>%
   stringr::str_replace_all(" ", "-")
@@ -184,7 +183,7 @@ final_dat <- state_counties %>%
 
 saveRDS(
   final_dat,
-  paste0("data/outcome/OSM/drive_times/ca_acute_hosp_drive_times.rds")
+  paste0("data/outcome/OSM/drive_times/tx_acute_hosp_drive_times.rds")
 )
 
 # ============================================================
@@ -194,4 +193,4 @@ saveRDS(
 message("Stopping OSRM server...")
 system(paste("docker stop", container_name), ignore.stdout = TRUE)
 
-message("DONE: California complete")
+message("DONE")

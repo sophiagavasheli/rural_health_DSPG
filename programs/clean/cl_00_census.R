@@ -6,14 +6,14 @@ library(dplyr)
 library(stringr)
 
 # Load TIGRIS Counties Boundary Dataset
-us_counties <- counties(cb = TRUE, year = 2023, class = "sf") %>% 
+us_counties <- counties(cb = TRUE, year = 2020, class = "sf") %>% 
   st_transform(crs = 4326) %>% 
   filter(as.numeric(STATEFP) < 57)
 
 # Load Census Population Centers Dataset
 centers = read.table("data/source/census/CenPop2020_Mean_TR.txt", header=TRUE, sep=",")
 
-state = states(cb=TRUE, year = 2023) %>% select(STATEFP, STUSPS)
+state = states(cb=TRUE, year = 2020) %>% select(STATEFP, STUSPS)
 
 centers_sf <- centers %>%
   filter(as.integer(STATEFP) < 57) %>%
@@ -32,5 +32,5 @@ centers_sf <- centers %>%
   st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
 
 
-saveRDS(us_counties, "data/outcome/census/us_counties_2023.rds")
+saveRDS(us_counties, "data/outcome/census/us_counties_2020.rds")
 saveRDS(centers_sf, "data/outcome/census/clean_pop_centroids_2020.rds")

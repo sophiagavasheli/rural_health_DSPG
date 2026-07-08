@@ -115,8 +115,19 @@ h1 {
 ========================================== */
 
 
-.btn-default:hover {
-  background-color: #b7c9bd;
+.btn-default {
+  background-color: white;
+  color: #2d6a4f;
+  border: 1px solid #2d6a4f;
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+
+.btn-default:hover,
+.btn-default:focus {
+  background-color: #2d6a4f;
+  color: white;
+  border-color: #2d6a4f;
   border-radius: 999px;
 }
 
@@ -129,6 +140,9 @@ h1 {
 
 .btn-primary:hover {
   background-color: #2d6a4f;
+  color: white;
+  border-color: #2d6a4f;
+  border-radius: 999px;
 }
 
 .domain-selected {

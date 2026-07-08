@@ -14,7 +14,11 @@ drive_times <- map_dfr(
     readRDS
 )
 
+#filter out the connecticut planning regions, using the older counties instead
+final = drive_times %>% 
+  filter(LSAD != "PL") 
+
 saveRDS(
-    drive_times,
+  final,
     "data/outcome/OSM/drive_times/us_acute_hosp_drive_times.rds"
 )

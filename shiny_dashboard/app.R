@@ -38,7 +38,8 @@ va_map_choices = c(
 
 ## drive time map
 ac_dr_times = readRDS("us_acute_hosp_drive_times.rds")
-us_counties = readRDS("us_counties_2023.rds")
+us_counties = readRDS("us_counties_2020.rds")
+states_sf <- states(year = 2023, class = "sf") %>% st_transform(4326)
 
 ## health sites map
 
@@ -386,10 +387,12 @@ tabPanel(
   fluidPage(
     h1("Primary Sources"),
     tags$p(
-      "The following is a list of data sources used in this project. Please see the ",
+      "The following sources were used to construct the dataset presented in the Data Availability Dashboard. Please see the ",
       tags$a(href = "https://github.com/sophiagavasheli/rural_health_DSPG", "GitHub", target = "_blank"),
-      " for more specific details on how the data was collected."
+      " for more specific details on how the data was collected. You can download a CSV version of the data here:"
     ),
+    downloadButton("download_data", "Download Data"),
+    hr(),
     
     # CLH
     div(
@@ -444,6 +447,27 @@ tabPanel(
     ),
     
     hr(),
+    # arc
+    div(
+      style = "display: flex; align-items: flex-start; gap: 20px;",
+      img(src = "arc.png", height = "100px", style = "flex-shrink:0;"),
+      div(
+        tags$a(
+          "Appalachian Regional Commission (ARC)",
+          href = "https://www.arc.gov/appalachian-counties-served-by-arc/",
+          target = "_blank",
+          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
+        ),
+        p(
+          '"The Appalachian Regional Commission identifies counties within the Appalachian region to support economic development initiatives." We used their official county list for regional classification.',
+          style = "font-size:14px; color:#333333; margin-top:5px;"
+        )
+      )
+    ),
+    
+    hr(),
+    h1("Spatial Data"),
+    p("These data were used for the maps and drive time calculations."),
     # osm
     div(
       style = "display: flex; align-items: flex-start; gap: 20px;",
@@ -480,24 +504,6 @@ tabPanel(
       )
     ),
     
-    hr(),
-    # arc
-    div(
-      style = "display: flex; align-items: flex-start; gap: 20px;",
-      img(src = "arc.png", height = "100px", style = "flex-shrink:0;"),
-      div(
-        tags$a(
-          "Appalachian Regional Commission (ARC)",
-          href = "https://www.arc.gov/appalachian-counties-served-by-arc/",
-          target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#0072B2;"
-        ),
-        p(
-          '"The Appalachian Regional Commission identifies counties within the Appalachian region to support economic development initiatives." We used their official county list for regional classification.',
-          style = "font-size:14px; color:#333333; margin-top:5px;"
-        )
-      )
-    ),
     
     hr(),
     # census
@@ -774,6 +780,16 @@ server <- function(input, output, session) {
           "<b>County:</b> ", NAME, "<br>",
           "<b>Avg Drive Time:</b> ", round(avg_drive_time_minutes, 1), " min"
         )
+      ) %>%
+      
+      # State outlines
+      addPolygons(
+        data = states_sf,
+        fill = FALSE,
+        color = "lightgray",
+        weight = 1,
+        opacity = 0.6,
+        smoothFactor = 0
       ) %>%
       
       # Legend
@@ -1094,6 +1110,18 @@ server <- function(input, output, session) {
       size = "l"
     ))
   })
+  
+
+# data download -----------------------------------------------------------
+
+  output$download_data <- downloadHandler(
+    filename = function() {
+      "clean_ALL_data.csv"
+    },
+    content = function(file) {
+      file.copy("clean_ALL_data.csv", file)
+    }
+  )  
   
   
 } #end server
