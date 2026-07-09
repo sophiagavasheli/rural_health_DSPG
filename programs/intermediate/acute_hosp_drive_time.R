@@ -141,7 +141,7 @@ process_state <- function(target_state_full_name) {
   
   # 5. INITIALIZE LOCAL OSRM SERVER VIA APPTAINER
   
-  data_dir <- ("data/outcome/OSM/OSM_states_2023")
+  data_dir <- ("data/OSM_states_2023")
   data_dir_clean <- normalizePath(data_dir, winslash = "/", mustWork = TRUE)
   pbf_file <- paste0(state_full_name, ".osm.pbf")
   

@@ -8,6 +8,10 @@
 #SBATCH --time=04:00:00
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=4
+#SBATCH --mail-user=sophiag23@vt.edu # enter desired email address for updates
+#SBATCH --mail-type=BEGIN # get emailed when job begins
+#SBATCH --mail-type=END   # get emailed when job ends
+#SBATCH --mail-type=FAIL  # get emailed if job fails
 
 
 set -euo pipefail
@@ -34,6 +38,8 @@ cd "/home/sophiag23/drive_times"
 # hospitals in "drive_times/data/clean_UNC_hosps_acute_2023.rds"
 # centroids "drive_times/data/clean_pop_centroids_2020.rds"
 
+rm -r logs # remove any previous logs/ results
+rm -r results
 mkdir -p logs
 mkdir -p results # data output will be here
 
