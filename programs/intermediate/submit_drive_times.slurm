@@ -10,8 +10,6 @@
 #SBATCH --mail-type=BEGIN # get emailed when job begins
 #SBATCH --mail-type=END   # get emailed when job ends
 #SBATCH --mail-type=FAIL  # get emailed if job fails
-#SBATCH --output=logs/drive_times_%A_%a.out
-#SBATCH --error=logs/drive_times_%A_%a.err
 
 
 set -euo pipefail
@@ -38,9 +36,6 @@ cd "/home/sophiag23/drive_times"
 # hospitals in "drive_times/data/clean_UNC_hosps_acute_2023.rds"
 # centroids "drive_times/data/clean_pop_centroids_2020.rds"
 
-rm -r logs # remove any previous logs/ results
-rm -r results
-mkdir -p logs
 mkdir -p results # data output will be here
 
 STATES=(
