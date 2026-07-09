@@ -13,26 +13,23 @@ predictor_topics = c(#"People", "Income", "Attainment", "Health insurance status
            "Characteristics of health care facilities", "Broadband Adoption",
            "Transportation")
 
+vars = c("CHR_PCT_MENTAL_DISTRESS", "CHR_PCT_LOW_BIRTH_WT", "CHR_PCT_ADULT_OBESITY", "CDCW_INJURY_DTH_RATE", "CDCW_SELFHARM_DTH_RATE",  "CDCA_STROKE_DTH_RATE_ABOVE35", "USDA_rural_indicator_2013")
+
 rf_keep = dash %>% 
-  filter(Topic %in% predictor_topics | Variable.Name == "USDA_rural_indicator_2013") %>% 
+  filter(Topic %in% predictor_topics | Variable.Name %in% vars) %>% 
   filter(Global.County.Coverage.Level == "Mostly Full Coverage")
 
-rf_predictors = unique(rf_keep$Variable.Name)
+rf_vars = unique(rf_keep$Variable.Name)
 
-rf_dat_pred = dat %>% 
-  select(YEAR, COUNTYFIPS, all_of(rf_predictors)) %>% 
+rf_dat = dat %>% 
+  select(YEAR, COUNTYFIPS, all_of(rf_vars)) %>% 
   select(YEAR, COUNTYFIPS, USDA_rural_indicator_2013, FCC_res_connections_10_mbps,
          contains("RATE"), contains("PCT")) %>% 
   filter(YEAR > 2009)
 
-saveRDS(rf_dat_pred, "data/analysis/random_forest_predictor_dat_2010_2023.rds")
+saveRDS(rf_dat, "data/analysis/random_forest_dat_2010_2023.rds")
 
 
-rf_dat_outcome = dat %>% 
-  select(YEAR, COUNTYFIPS, CHR_PCT_MENTAL_DISTRESS, CHR_PCT_LOW_BIRTH_WT, CHR_PCT_DIABETES, CHR_PCT_ADULT_OBESITY, CHR_PCT_ALCOHOL_DRIV_DEATH, CDCA_HEART_DTH_RATE_ABOVE35, CDCW_INJURY_DTH_RATE, CDCW_SELFHARM_DTH_RATE, CDCAP_HIVDIAG_RATE_ABOVE13, CDCA_STROKE_DTH_RATE_ABOVE35, CDCW_crude_death_rate) %>% 
-  filter(YEAR > 2009)
-
-saveRDS(rf_dat_outcome, "data/analysis/random_forest_outcome_dat_2010_2023.rds")
 
 # future dashboard map
 # cons = counties(year = 2023, cb = TRUE) %>%

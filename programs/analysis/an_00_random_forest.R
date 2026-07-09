@@ -3,17 +3,15 @@
 library(grf)
 library(dplyr)
 library(randomForest)
-library(purrr)
+library(tibble)
 
-## data prep
-predictors = readRDS("data/analysis/random_forest_predictor_dat_2010_2023.rds")
-outcome = readRDS("data/analysis/random_forest_outcome_dat_2010_2023.rds")
+dat = readRDS("data/analysis/random_forest_dat_2010_2023.rds")
 
-# very time consuming, maybe try on ARC
-#imputed_pred = mice(pred_filt, method = "rf")
+# health outcomes
+outcomes = c("CHR_PCT_MENTAL_DISTRESS", "CHR_PCT_LOW_BIRTH_WT", "CHR_PCT_ADULT_OBESITY", "CDCW_INJURY_DTH_RATE", "CDCW_SELFHARM_DTH_RATE",  "CDCA_STROKE_DTH_RATE_ABOVE35")
 
-# faster imputation (replace with median)
-pred_clean = predictors %>% 
+# imputation (replace with median)
+imputed = dat %>% 
   filter(as.numeric(COUNTYFIPS) < 57000)%>% 
   arrange(YEAR, COUNTYFIPS) %>% 
   mutate(COUNTYFIPS = as.factor(COUNTYFIPS)) %>% 
@@ -23,90 +21,187 @@ pred_clean = predictors %>%
 
 
 #some of the variables are entirely missing from a year
-vars_to_remove <- pred_clean %>%
+vars_to_remove <- imputed %>%
+  select(-all_of(outcomes)) %>%           # ignore health outcomes
   group_by(YEAR) %>%
   summarise(across(where(is.numeric), ~ all(is.na(.))), .groups = "drop") %>%
-  # Keep only columns where at least one year returned TRUE (all NA)
-  select(where(~ any(. == TRUE))) %>%
+  select(where(any)) %>%
   names()
 
-pred_clean <- pred_clean %>%
-  select(-all_of(vars_to_remove), -COUNTYFIPS)
+clean <- imputed %>%
+  select(-all_of(vars_to_remove)) %>% 
+  arrange(YEAR, COUNTYFIPS)
 
-# function to build RF model based on passed in health outcome
-rf_model <- function(pred_dat, outcome_dat, start_yr = 2010, end_yr = 2023, outcome = "CDCW_crude_death_rate") {
-  
-  # filter predictor data
-  pred_mat = pred_dat %>% 
-    filter(YEAR >= start_yr & YEAR <= end_yr) %>% 
-    as.matrix()
-  
-  # extract/clean chosen outcome
-  outcome_clean = outcome_dat %>% 
-    select(YEAR, COUNTYFIPS, all_of(outcome)) %>% 
-    filter(YEAR >= start_yr & YEAR <= end_yr) %>% 
-    filter(as.numeric(COUNTYFIPS) < 57000)%>% 
-    arrange(YEAR, COUNTYFIPS) %>% 
-    mutate(COUNTYFIPS = as.factor(COUNTYFIPS)) %>% 
-    group_split(YEAR) %>%
-    map_dfr(~ na.roughfix(.x)) %>% 
-    arrange(YEAR, COUNTYFIPS)
-  
-  y <- outcome_clean[[outcome]]
-  
-  mod = regression_forest(pred_mat, y)
-  
-  importance <- variable_importance(mod)
-  
-  importance_df <- data.frame(
-    variable = colnames(pred_mat),
-    importance = importance
-  ) 
-  
-  pred <- predict(mod)
-  
-  results <- data.frame(
-    observed = y,
-    predicted = pred$predictions
-  )
-  
-  
-  list(
-    model = mod,
-    importance = importance_df,
-    predictions = results
+not_predictors = c("CHR_PCT_MENTAL_DISTRESS", "CHR_PCT_LOW_BIRTH_WT", "CHR_PCT_ADULT_OBESITY", "CDCW_INJURY_DTH_RATE", "CDCW_SELFHARM_DTH_RATE",  "CDCA_STROKE_DTH_RATE_ABOVE35", "YEAR", "COUNTYFIPS")
+
+predictors <- setdiff(names(clean), not_predictors)
+
+# County-level 70/30 train/test split
+train_share <- 0.70
+seed <- 67 # reproducibility
+
+set.seed(seed)
+
+county_ids <- unique(clean$COUNTYFIPS)
+
+train_counties <- sample(
+  county_ids,
+  size = floor(train_share * length(county_ids))
+)
+
+test_counties <- setdiff(county_ids, train_counties)
+
+train_df <- clean %>%
+  filter(COUNTYFIPS %in% train_counties)
+
+test_df <- clean %>%
+  filter(COUNTYFIPS %in% test_counties)
+
+# Check that no county appears in both training and testing.
+overlap_counties <- intersect(unique(train_df$COUNTYFIPS), unique(test_df$COUNTYFIPS))
+stopifnot(length(overlap_counties) == 0)
+
+message("Training counties: ", length(unique(train_df$COUNTYFIPS)))
+message("Testing counties: ", length(unique(test_df$COUNTYFIPS)))
+message("Training rows: ", nrow(train_df))
+message("Testing rows: ", nrow(test_df))
+
+
+# model performance helper
+model_metrics <- function(observed, predicted) {
+  tibble(
+    RMSE = sqrt(mean((observed - predicted)^2, na.rm = TRUE)),
+    MAE  = mean(abs(observed - predicted), na.rm = TRUE),
+    R2   = cor(observed, predicted, use = "complete.obs")^2
   )
 }
 
 
+# function to build RF model based on passed in health outcome
+rf_model <- function(train_df, test_df, start_yr, end_yr, outcome, top_n = 10, num_trees = 2000, tune_setting = "none") {
+  
+  train_df = train_df %>% 
+    filter(YEAR >= start_yr & YEAR <= end_yr)
+  
+  test_df = test_df %>% 
+    filter(YEAR >= start_yr & YEAR <= end_yr)
+  
+  X_train <- train_df %>%
+    select(all_of(predictors)) %>%
+    as.matrix()
+  
+  y_train <- train_df[[outcome]]
+  
+  X_test <- test_df %>%
+    select(all_of(predictors)) %>%
+    as.matrix()
+  
+  y_test <- test_df[[outcome]]
+  
+  message("X_train dimensions: ", paste(dim(X_train), collapse = " x "))
+  message("X_test dimensions: ", paste(dim(X_test), collapse = " x "))
+  
+  # full model
+  rf_full <- regression_forest(
+    X = X_train,
+    Y = y_train,
+    num.trees = num_trees,
+    tune.parameters = tune_setting,
+    seed = seed
+  )
+  
+  # predict w/ full model
+  train_pred <- predict(rf_full)$predictions
+  test_pred <- predict(rf_full, X_test)$predictions
+  
+  train_performance <- model_metrics(y_train, train_pred)
+  test_performance  <- model_metrics(y_test, test_pred)
+  
+  message("Training performance:")
+  print(train_performance)
+  
+  message("Testing performance:")
+  print(test_performance)
+  
+  importance_df <- tibble(
+    variable = predictors,
+    importance = variable_importance(rf_full)
+  ) %>%
+    arrange(desc(importance))
+  
+  top_variables <- importance_df %>%
+    slice_head(n = top_n) %>%
+    pull(variable)
+  
+  message("Top variables:")
+  print(top_variables)
+  
+  # refit with important vars
+  X_train_selected <- X_train[, top_variables, drop = FALSE]
+  X_test_selected  <- X_test[, top_variables, drop = FALSE]
+  
+  rf_selected <- regression_forest(
+    X = X_train_selected,
+    Y = y_train,
+    num.trees = num_trees,
+    tune.parameters = tune_setting,
+    seed = seed
+  )
+  
+  selected_test_pred <- predict(rf_selected, X_test_selected)$predictions
+  
+  selected_test_performance <- model_metrics(y_test, selected_test_pred)
+  
+  performance_summary <- bind_rows(
+    full_model = test_performance,
+    selected_model = selected_test_performance,
+    .id = "model"
+  )
+  
+  print(performance_summary)
+  
+  predictions_output <- tibble(
+    YEAR = test_df$YEAR,
+    COUNTYFIPS = test_df$COUNTYFIPS,
+    observed = y_test,
+    predicted_full_model = test_pred,
+    predicted_selected_model = selected_test_pred
+  )
+  
+  # Create output folder if needed.
+  if (!dir.exists("data/output")) {
+    dir.create("data/output", recursive = TRUE)
+  }
+  
+  save(
+    rf_full,
+    rf_selected,
+    train_performance,
+    test_performance,
+    selected_test_performance,
+    performance_summary,
+    importance_df,
+    top_variables,
+    predictions_output,
+    file = paste0("data/output/", outcome, "_grf_results.RData")
+  )
+  
+} 
 
-set.seed(67) #reproducibility
 
-# run modles
+# run models
 ## dates from data availability dashboard
-mortality = rf_model(pred_clean, outcome)
-stroke_dth = rf_model(pred_clean, outcome, 2010, 2021, "CDCA_STROKE_DTH_RATE_ABOVE35")
-hiv_rate = rf_model(pred_clean, outcome, 2010, 2023, "CDCAP_HIVDIAG_RATE_ABOVE13")
-self_harm_dth = rf_model(pred_clean, outcome, 2010, 2023, "CDCW_SELFHARM_DTH_RATE")
-injury_dth = rf_model(pred_clean, outcome, 2010, 2023, "CDCW_INJURY_DTH_RATE")
-heart_dth = rf_model(pred_clean, outcome, 2010, 2021, "CDCA_HEART_DTH_RATE_ABOVE35")
-obesity = rf_model(pred_clean, outcome, 2010, 2017, "CHR_PCT_ADULT_OBESITY")
-diabetes = rf_model(pred_clean, outcome, 2010, 2017, "CHR_PCT_DIABETES")
-low_birth = rf_model(pred_clean, outcome, 2010, 2014, "CHR_PCT_LOW_BIRTH_WT")
-mental = rf_model(pred_clean, outcome, 2014, 2022, "CHR_PCT_MENTAL_DISTRESS")
-alc_drv_death = rf_model(pred_clean, outcome, 2012, 2022, "CHR_PCT_ALCOHOL_DRIV_DEATH")
+stroke_dth <- rf_model(train_df,test_df,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35")
 
-save(
-  mortality,
-  stroke_dth,
-  hiv_rate,
-  self_harm_dth,
-  injury_dth,
-  heart_dth,
-  obesity,
-  diabetes,
-  low_birth,
-  mental,
-  alc_drv_death,
-  file = "random_forest_models.RData"
-)
+self_harm_dth <- rf_model(train_df,test_df,2010,2023,"CDCW_SELFHARM_DTH_RATE")
+
+injury_dth <- rf_model(train_df,test_df,2010,2023,"CDCW_INJURY_DTH_RATE")
+
+obesity <- rf_model(train_df,test_df,2010,2017,"CHR_PCT_ADULT_OBESITY")
+
+low_birth <- rf_model(train_df,test_df,2010,2014,"CHR_PCT_LOW_BIRTH_WT")
+
+mental <- rf_model(train_df,test_df,2014,2022,"CHR_PCT_MENTAL_DISTRESS")
+
+
+# tune.setting = "all" for final analysis
