@@ -149,16 +149,22 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
   )
   
   selected_test_pred <- predict(rf_selected, X_test_selected)$predictions
+  selected_train_pred <- predict(rf_selected)$predictions
   
   selected_test_performance <- model_metrics(y_test, selected_test_pred)
+  selected_train_performance <- model_metrics(y_train, selected_train_pred)
+  
   
   performance_summary <- bind_rows(
-    full_model = test_performance,
-    selected_model = selected_test_performance,
+    full_model_test = test_performance,
+    full_model_train = train_performance,
+    selected_model_test = selected_test_performance,
+    selected_model_train = selected_train_performance,
     .id = "model"
   )
   
-  print(performance_summary)
+  performance_summary = performance_summary %>% 
+    mutate(health_outcome = outcome)
   
   predictions_output <- tibble(
     YEAR = test_df$YEAR,
@@ -176,9 +182,6 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
   save(
     rf_full,
     rf_selected,
-    train_performance,
-    test_performance,
-    selected_test_performance,
     performance_summary,
     importance_df,
     top_variables,

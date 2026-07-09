@@ -1,4 +1,4 @@
-# random forest model plots
+# random forest variable importance plots per health outcome
 
 library(dplyr)
 library(ggplot2)
@@ -23,7 +23,7 @@ plot_importance <- function(outcome, title, start_yr, end_yr) {
     )
   
   p <- importance_df %>%
-    slice_max(importance, n = 20) %>%
+    slice_max(importance, n = 10) %>%
     ggplot(
       aes(
         x = reorder(variable, importance),
@@ -32,8 +32,9 @@ plot_importance <- function(outcome, title, start_yr, end_yr) {
     ) +
     geom_col(fill = "maroon") +
     coord_flip() +
+    scale_x_discrete(labels = \(x) stringr::str_wrap(x, width = 30)) +
     labs(
-      title = paste("Top 20 Variable Importance for", title),
+      title = paste("Top 10 Variable Importance for", title),
       x = "Predictor Variable",
       y = "Variable Importance",
       caption = paste("Data years:", start_yr, "-", end_yr)

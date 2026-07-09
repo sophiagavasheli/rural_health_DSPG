@@ -39,7 +39,8 @@ rf_vars <- unique(c(outcomes, additional_vars, rf_predictors))
 
 rf_dat <- dat %>% 
   select(YEAR, COUNTYFIPS, all_of(rf_vars)) %>%
-  select(YEAR, COUNTYFIPS, contains("RATE"), contains("PCT")) %>% 
+  select(YEAR, COUNTYFIPS, USDA_rural_indicator_2013,
+         FCC_res_connections_10_mbps, contains("RATE"), contains("PCT")) %>% 
   filter(YEAR > 2009)
 
 saveRDS(
