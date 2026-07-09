@@ -4,7 +4,6 @@
 .Ruserdata
 .DS_Store
 .positai
-*.bash
 data/analysis/clean_ALL_data.csv
 shiny_dashboard/clean_ALL_data.csv
 *.osm.pbf
