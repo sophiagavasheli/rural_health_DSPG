@@ -2,8 +2,6 @@
 #SBATCH --job-name=ac_hosp_drive
 #SBATCH --account=dspg_viz
 #SBATCH --partition=normal_q
-#SBATCH --output=logs/drive_times_%A_%a.out
-#SBATCH --error=logs/drive_times_%A_%a.err
 #SBATCH --array=0-50
 #SBATCH --time=04:00:00
 #SBATCH --mem=32G
@@ -12,6 +10,8 @@
 #SBATCH --mail-type=BEGIN # get emailed when job begins
 #SBATCH --mail-type=END   # get emailed when job ends
 #SBATCH --mail-type=FAIL  # get emailed if job fails
+#SBATCH --output=logs/drive_times_%A_%a.out
+#SBATCH --error=logs/drive_times_%A_%a.err
 
 
 set -euo pipefail

@@ -294,7 +294,7 @@ process_state <- function(target_state_full_name) {
     final_dat <- state_counties %>%
       left_join(average_county_access, by = c("COUNTYFP" = "county_id"))
     
-    saveRDS(final_dat, paste0("results", state_abb, "_acute_hosp_drive_times.rds"))
+    saveRDS(final_dat, paste0("results/", state_abb, "_acute_hosp_drive_times.rds"))
     
     message(paste("Processing complete for", toupper(state_abb), ". Files saved!"))
   }
