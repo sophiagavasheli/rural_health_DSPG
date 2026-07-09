@@ -26,46 +26,16 @@ vars_to_remove <- imputed %>%
   select(-all_of(outcomes)) %>%           # ignore health outcomes
   group_by(YEAR) %>%
   summarise(across(where(is.numeric), ~ all(is.na(.))), .groups = "drop") %>%
+  select(-YEAR) %>%  # don't want to exclude year
   select(where(any)) %>%
   names()
 
 clean <- imputed %>%
-  select(-all_of(vars_to_remove)) %>% 
-  arrange(YEAR, COUNTYFIPS)
+  select(-all_of(vars_to_remove))
 
 not_predictors = c("CHR_PCT_MENTAL_DISTRESS", "CHR_PCT_LOW_BIRTH_WT", "CHR_PCT_ADULT_OBESITY", "CDCW_INJURY_DTH_RATE", "CDCW_SELFHARM_DTH_RATE",  "CDCA_STROKE_DTH_RATE_ABOVE35", "YEAR", "COUNTYFIPS")
 
 predictors <- setdiff(names(clean), not_predictors)
-
-# County-level 70/30 train/test split
-train_share <- 0.70
-seed <- 67 # reproducibility
-
-set.seed(seed)
-
-county_ids <- unique(clean$COUNTYFIPS)
-
-train_counties <- sample(
-  county_ids,
-  size = floor(train_share * length(county_ids))
-)
-
-test_counties <- setdiff(county_ids, train_counties)
-
-train_df <- clean %>%
-  filter(COUNTYFIPS %in% train_counties)
-
-test_df <- clean %>%
-  filter(COUNTYFIPS %in% test_counties)
-
-# Check that no county appears in both training and testing.
-overlap_counties <- intersect(unique(train_df$COUNTYFIPS), unique(test_df$COUNTYFIPS))
-stopifnot(length(overlap_counties) == 0)
-
-message("Training counties: ", length(unique(train_df$COUNTYFIPS)))
-message("Testing counties: ", length(unique(test_df$COUNTYFIPS)))
-message("Training rows: ", nrow(train_df))
-message("Testing rows: ", nrow(test_df))
 
 
 # model performance helper
@@ -79,13 +49,42 @@ model_metrics <- function(observed, predicted) {
 
 
 # function to build RF model based on passed in health outcome
-rf_model <- function(train_df, test_df, start_yr, end_yr, outcome, top_n = 10, num_trees = 2000, tune_setting = "none") {
+rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2000, tune_setting = "none") {
   
-  train_df = train_df %>% 
+  clean = clean %>% 
     filter(YEAR >= start_yr & YEAR <= end_yr)
   
-  test_df = test_df %>% 
-    filter(YEAR >= start_yr & YEAR <= end_yr)
+  
+  # County-level 70/30 train/test split
+  train_share <- 0.70
+  seed <- 67 # reproducibility
+  
+  set.seed(seed)
+  
+  county_ids <- unique(clean$COUNTYFIPS)
+  
+  train_counties <- sample(
+    county_ids,
+    size = floor(train_share * length(county_ids))
+  )
+  
+  test_counties <- setdiff(county_ids, train_counties)
+  
+  train_df <- clean %>%
+    filter(COUNTYFIPS %in% train_counties)
+  
+  test_df <- clean %>%
+    filter(COUNTYFIPS %in% test_counties)
+  
+  # Check that no county appears in both training and testing.
+  overlap_counties <- intersect(unique(train_df$COUNTYFIPS), unique(test_df$COUNTYFIPS))
+  stopifnot(length(overlap_counties) == 0)
+  
+  message("Training counties: ", length(unique(train_df$COUNTYFIPS)))
+  message("Testing counties: ", length(unique(test_df$COUNTYFIPS)))
+  message("Training rows: ", nrow(train_df))
+  message("Testing rows: ", nrow(test_df))
+  
   
   X_train <- train_df %>%
     select(all_of(predictors)) %>%
@@ -192,17 +191,17 @@ rf_model <- function(train_df, test_df, start_yr, end_yr, outcome, top_n = 10, n
 
 # run models
 ## dates from data availability dashboard
-stroke_dth <- rf_model(train_df,test_df,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35")
+stroke_dth <- rf_model(clean,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35")
 
-self_harm_dth <- rf_model(train_df,test_df,2010,2023,"CDCW_SELFHARM_DTH_RATE")
+self_harm_dth <- rf_model(clean,2010,2023,"CDCW_SELFHARM_DTH_RATE")
 
-injury_dth <- rf_model(train_df,test_df,2010,2023,"CDCW_INJURY_DTH_RATE")
+injury_dth <- rf_model(clean,2010,2023,"CDCW_INJURY_DTH_RATE")
 
-obesity <- rf_model(train_df,test_df,2010,2017,"CHR_PCT_ADULT_OBESITY")
+obesity <- rf_model(clean,2010,2017,"CHR_PCT_ADULT_OBESITY")
 
-low_birth <- rf_model(train_df,test_df,2010,2014,"CHR_PCT_LOW_BIRTH_WT")
+low_birth <- rf_model(clean,2010,2014,"CHR_PCT_LOW_BIRTH_WT")
 
-mental <- rf_model(train_df,test_df,2014,2022,"CHR_PCT_MENTAL_DISTRESS")
+mental <- rf_model(clean,2014,2022,"CHR_PCT_MENTAL_DISTRESS")
 
 
 # tune.setting = "all" for final analysis

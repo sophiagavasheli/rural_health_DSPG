@@ -1,16 +1,17 @@
 # random forest model plots
 
-
 library(dplyr)
 library(ggplot2)
 
-#models
-load("data/analysis/random_forest_models.RData")
-
-var_lookup <- read_csv("reference/all_codebook.csv") %>%
+# for prettier names
+var_lookup <- read.csv("reference/all_codebook.csv") %>%
   select(Variable.Name, Variable.Label)
 
-plot_importance <- function(importance_df, title, start_yr, end_yr) {
+
+# load model and plot importance
+plot_importance <- function(outcome, title, start_yr, end_yr) {
+  
+  load(paste0("data/output/", outcome, "_grf_results.RData"))
   
   importance_df <- importance_df %>%
     left_join(
@@ -18,7 +19,7 @@ plot_importance <- function(importance_df, title, start_yr, end_yr) {
       by = c("variable" = "Variable.Name")
     ) %>%
     mutate(
-      variable = coalesce(Variable.label, variable)
+      variable = coalesce(Variable.Label, variable)
     )
   
   p <- importance_df %>%
@@ -35,7 +36,7 @@ plot_importance <- function(importance_df, title, start_yr, end_yr) {
       title = paste("Top 20 Variable Importance for", title),
       x = "Predictor Variable",
       y = "Variable Importance",
-      caption = paste(start_yr, "-", end_yr)
+      caption = paste("Data years:", start_yr, "-", end_yr)
     )
   
   ggsave(
@@ -45,79 +46,39 @@ plot_importance <- function(importance_df, title, start_yr, end_yr) {
 }
 
 # plots
-plot_importance(
-  mortality$importance,
-  title = "All-Cause Mortality Rate",
-  start_yr = 2010,
-  end_yr = 2023
-)
-
-plot_importance(
-  stroke_dth$importance,
+plot_importance("CDCA_STROKE_DTH_RATE_ABOVE35",
   title = "Stroke Mortality Rate (Age 35+)",
-  start_yr = 2010,
-  end_yr = 2021
-)
+  start_yr = 2010, end_yr = 2021)
 
-plot_importance(
-  hiv_rate$importance,
-  title = "HIV Diagnosis Rate (Age 13+)",
-  start_yr = 2010,
-  end_yr = 2023
-)
 
-plot_importance(
-  self_harm_dth$importance,
+plot_importance("CDCW_SELFHARM_DTH_RATE",
   title = "Self-Harm Mortality Rate",
   start_yr = 2010,
   end_yr = 2023
 )
 
-plot_importance(
-  injury_dth$importance,
+plot_importance("CDCW_INJURY_DTH_RATE",
   title = "Injury Mortality Rate",
   start_yr = 2010,
   end_yr = 2023
 )
 
-plot_importance(
-  heart_dth$importance,
-  title = "Heart Disease Mortality Rate (Age 35+)",
-  start_yr = 2010,
-  end_yr = 2021
-)
 
-plot_importance(
-  obesity$importance,
+plot_importance("CHR_PCT_ADULT_OBESITY",
   title = "Adult Obesity Prevalence",
   start_yr = 2010,
   end_yr = 2017
 )
 
-plot_importance(
-  diabetes$importance,
-  title = "Adult Diabetes Prevalence",
-  start_yr = 2010,
-  end_yr = 2017
-)
 
-plot_importance(
-  low_birth$importance,
+plot_importance("CHR_PCT_LOW_BIRTH_WT",
   title = "Low Birth Weight Prevalence",
   start_yr = 2010,
   end_yr = 2014
 )
 
-plot_importance(
-  mental$importance,
+plot_importance("CHR_PCT_MENTAL_DISTRESS",
   title = "Frequent Mental Distress Prevalence",
   start_yr = 2014,
-  end_yr = 2022
-)
-
-plot_importance(
-  alc_drv_death$importance,
-  title = "Alcohol-Impaired Driving Deaths",
-  start_yr = 2012,
   end_yr = 2022
 )
