@@ -172,19 +172,22 @@ process_state <- function(target_state_full_name) {
     message("=== Step 1: Extracting OSRM Profile ===")
     system(paste(
       "apptainer exec", apptainer_bind, sif_path,
-      "osrm-extract -p /usr/local/share/osrm/profiles/car.lua /data/", pbf_file
+      "osrm-extract -p /usr/local/share/osrm/profiles/car.lua",
+      paste0("/data/", pbf_file)
     ))
     
     message("=== Step 2: Partitioning OSRM Data ===")
     system(paste(
       "apptainer exec", apptainer_bind, sif_path,
-      "osrm-partition /data/", paste0(state_full_name, ".osrm")
+      "osrm-partition",
+      paste0("/data/", state_full_name, ".osrm")
     ))
     
     message("=== Step 3: Customizing OSRM Data ===")
     system(paste(
       "apptainer exec", apptainer_bind, sif_path,
-      "osrm-customize /data/", paste0(state_full_name, ".osrm")
+      "osrm-customize",
+      paste0("/data/", state_full_name, ".osrm")
     ))
     
     if (!file.exists(mldgr_file)) {

@@ -8,27 +8,44 @@ dat <- readRDS("data/analysis/clean_ALL_data.rds")
 dash = readRDS("shiny_dashboard/dashboard_data.rds")
 
 # random forest data prep
-predictor_topics = c(#"People", "Income", "Attainment", "Health insurance status", 
-           "Characteristics of health care providers", 
-           "Characteristics of health care facilities", "Broadband Adoption",
-           "Transportation")
+outcomes <- c(
+  "CHR_PCT_MENTAL_DISTRESS",
+  "CHR_PCT_LOW_BIRTH_WT",
+  "CHR_PCT_ADULT_OBESITY",
+  "CDCW_INJURY_DTH_RATE",
+  "CDCW_SELFHARM_DTH_RATE",
+  "CDCA_STROKE_DTH_RATE_ABOVE35"
+)
 
-vars = c("CHR_PCT_MENTAL_DISTRESS", "CHR_PCT_LOW_BIRTH_WT", "CHR_PCT_ADULT_OBESITY", "CDCW_INJURY_DTH_RATE", "CDCW_SELFHARM_DTH_RATE",  "CDCA_STROKE_DTH_RATE_ABOVE35", "USDA_rural_indicator_2013")
+predictor_topics = c(#"People", "Income", "Attainment", "Health insurance status",
+  "Characteristics of health care providers", "Characteristics of health care facilities", "Transportation")
 
-rf_keep = dash %>% 
-  filter(Topic %in% predictor_topics | Variable.Name %in% vars) %>% 
-  filter(Global.County.Coverage.Level == "Mostly Full Coverage")
+additional_vars <- c(
+  "USDA_rural_indicator_2013",
+  "FCC_res_connections_10_mbps"
+)
 
-rf_vars = unique(rf_keep$Variable.Name)
+rf_predictors <- dash %>% 
+  filter(
+    Topic %in% predictor_topics |
+      Variable.Name %in% additional_vars) %>%
+  filter(
+    Global.County.Coverage.Level == "Mostly Full Coverage") %>%
+  pull(Variable.Name) %>%
+  unique()
 
-rf_dat = dat %>% 
-  select(YEAR, COUNTYFIPS, all_of(rf_vars)) %>% 
-  select(YEAR, COUNTYFIPS, USDA_rural_indicator_2013, FCC_res_connections_10_mbps,
-         contains("RATE"), contains("PCT")) %>% 
+# Combine outcomes + predictors
+rf_vars <- unique(c(outcomes, additional_vars, rf_predictors))
+
+rf_dat <- dat %>% 
+  select(YEAR, COUNTYFIPS, all_of(rf_vars)) %>%
+  select(YEAR, COUNTYFIPS, contains("RATE"), contains("PCT")) %>% 
   filter(YEAR > 2009)
 
-saveRDS(rf_dat, "data/analysis/random_forest_dat_2010_2023.rds")
-
+saveRDS(
+  rf_dat,
+  "data/analysis/random_forest_dat_2010_2023.rds"
+)
 
 
 # future dashboard map
