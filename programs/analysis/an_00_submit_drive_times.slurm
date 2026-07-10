@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=ac_hosp_drive
+#SBATCH --job-name=drive_times
 #SBATCH --account=dspg_viz
 #SBATCH --partition=normal_q
 #SBATCH --array=0-50

@@ -1,5 +1,5 @@
 # Calculating the drive time to the nearest health site (of several types) for ONE state (2023 OSM roads)
-# this script is meant to be run by in_00_submit_drive_times.slurm
+# this script is meant to be run by an_00_submit_drive_times.slurm
 
 suppressPackageStartupMessages({
   library(dplyr)
