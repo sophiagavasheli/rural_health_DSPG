@@ -49,7 +49,7 @@ model_metrics <- function(observed, predicted) {
 
 
 # function to build RF model based on passed in health outcome
-rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2000, tune_setting = "none") {
+rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2000, tune_setting = "all", dir) {
   
   clean = clean %>% 
     filter(YEAR >= start_yr & YEAR <= end_yr)
@@ -175,8 +175,9 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
   )
   
   # Create output folder if needed.
-  if (!dir.exists("data/output")) {
-    dir.create("data/output", recursive = TRUE)
+  path = paste0("data/output/", dir)
+  if (!dir.exists(path)) {
+    dir.create(path, recursive = TRUE)
   }
   
   save(
@@ -194,17 +195,14 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
 
 # run models
 ## dates from data availability dashboard
-stroke_dth <- rf_model(clean,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35")
+stroke_dth <- rf_model(clean,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35", "all_params_tuned")
 
-self_harm_dth <- rf_model(clean,2010,2023,"CDCW_SELFHARM_DTH_RATE")
+self_harm_dth <- rf_model(clean,2010,2023,"CDCW_SELFHARM_DTH_RATE", "all_params_tuned")
 
-injury_dth <- rf_model(clean,2010,2023,"CDCW_INJURY_DTH_RATE")
+injury_dth <- rf_model(clean,2010,2023,"CDCW_INJURY_DTH_RATE", "all_params_tuned")
 
-obesity <- rf_model(clean,2010,2017,"CHR_PCT_ADULT_OBESITY")
+obesity <- rf_model(clean,2010,2017,"CHR_PCT_ADULT_OBESITY", "all_params_tuned")
 
-low_birth <- rf_model(clean,2010,2014,"CHR_PCT_LOW_BIRTH_WT")
+low_birth <- rf_model(clean,2010,2014,"CHR_PCT_LOW_BIRTH_WT", "all_params_tuned")
 
-mental <- rf_model(clean,2014,2022,"CHR_PCT_MENTAL_DISTRESS")
-
-
-# tune.setting = "all" for final analysis
+mental <- rf_model(clean,2014,2022,"CHR_PCT_MENTAL_DISTRESS", "all_params_tuned")
