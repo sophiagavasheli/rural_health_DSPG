@@ -33,7 +33,7 @@ cd "/home/sophiag23/drive_times"
 # MAKE SURE ALL THE DATA IS CORRECLY COPIED
 # osm.pbf files in "drive_times/data/OSM_states_2023", generated with cl_01_OSM_state_pbfs.sh
 # counties in "drive_times/data/us_counties_2020.rds"
-# hospitals in "drive_times/data/clean_UNC_hosps_acute_2023.rds"
+# health sites in "data/drive_time_health_sites_2023.rds"
 # centroids "drive_times/data/clean_pop_centroids_2020.rds"
 
 mkdir -p results # data output will be here
@@ -58,7 +58,7 @@ echo "Array task $SLURM_ARRAY_TASK_ID -> state: $STATE (OSRM port $OSRM_PORT)"
 module load apptainer
 module load R-bundle-CRAN/2025.11-foss-2025b
 
-Rscript acute_hosp_drive_time.R "$STATE"
+Rscript health_site_drive_times.R "$STATE"
 
 
 

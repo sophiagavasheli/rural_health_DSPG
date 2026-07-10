@@ -42,36 +42,8 @@ us_counties = readRDS("us_counties_2020.rds")
 states_sf <- states(year = 2023, class = "sf") %>% st_transform(4326)
 
 ## health sites map
-
-health_site_labels <- c(
-  hospital = "Hospital",
-  clinic = "Clinic",
-  doctors_general = "General Doctors",
-  dentist = "Dentist",
-  pharmacy = "Pharmacy",
-  mental_health = "Mental Health",
-  nursing_home = "Nursing Home",
-  vision = "Vision Care",
-  rehab = "Rehabilitation",
-  diagnostics = "Diagnostics",
-  first_aid_emergency = "Emergency & First Aid",
-  kidney_care = "Kidney Care",
-  specialists_cancer = "Cancer Specialists",
-  specialists_medical_surgery = "Medical & Surgical Specialists",
-  specialists_musculoskeletal_pain = "Musculoskeletal & Pain Specialists",
-  specialists_reproductive = "Reproductive Specialists",
-  specialists_aesthetic = "Aesthetic Specialists",
-  other_healthcare = "Other Healthcare"
-)
-
-
-health_sites = readRDS("clean_health_sites_2023.rds") %>% 
-  filter(state_fips == "51") %>% 
-  mutate(
-    health_site_label = health_site_labels[health_site_type]
-  )
-
-
+health_sites = readRDS("us_health_sites_2023.rds")
+  
 
 ## dashboard data
 long_data <- readRDS("dashboard_data.rds")
@@ -630,7 +602,7 @@ tabPanel(
   fluidRow(
     sidebarLayout(
       sidebarPanel(
-        p("OSM Health Sites, 2023"),
+        p("Health Sites, 2023"),
         
         # filter bar
         selectInput(
@@ -638,7 +610,9 @@ tabPanel(
           "Health site type:",
           choices = c("All", sort(unique(health_sites$health_site_label))),
           selected = "All"
-        )
+        ),
+        
+        p("Hospitals are sourced from the UNC Shep's Center and the other health sites are sourced from OSM. Please be aware that OSM sites are user generated and many sites might be missing on this map.")
       ),
       
       mainPanel(
@@ -805,7 +779,7 @@ server <- function(input, output, session) {
   ## health site map
  
   health_site_pal <- colorFactor(
-    viridis::magma(18),
+    viridis::turbo(17),
     health_sites$health_site_label
   )
   

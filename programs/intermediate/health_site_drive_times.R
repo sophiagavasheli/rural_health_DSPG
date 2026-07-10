@@ -1,4 +1,4 @@
-# Calculating the drive time to the nearest acute hospital for ONE state (2023 OSM roads and hospitals)
+# Calculating the drive time to the nearest health site (of several types) for ONE state (2023 OSM roads)
 # this script is meant to be run by in_00_submit_drive_times.slurm
 
 suppressPackageStartupMessages({
@@ -67,6 +67,18 @@ state_lookup_all <- tibble::tribble(
 ) %>%
   mutate(state_full_name = state_name %>% tolower() %>% stringr::str_replace_all(" ", "-"))
 
+# 1b. HEALTH SITE TYPES TO COMPUTE DRIVE TIMES FOR
+# Each of these must appear as a value in the `health_site_type` column of the
+# combined health-sites dataset loaded in section 3 below.
+sites <- c(
+  "acute_care_hospital",
+  "doctors_medical_specialists",
+  "mental_health",
+  "dentist",
+  "clinic_urgent_care",
+  "pharmacy"
+)
+
 # 2. GET TARGET STATE FROM COMMAND LINE (SLURM ARRAY TASK)
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -78,15 +90,17 @@ target_state_full_name <- tolower(args[1])
 
 if (!target_state_full_name %in% state_lookup_all$state_full_name) {
   stop(paste0("'", target_state_full_name, "' is not a recognized state_full_name. ",
-              "Check spelling (e.g. 'new-mexico', 'district-of-columbia')."))
+              "Check spelling (e.g. 'new-mexico', 'district-of-columbia').") )
 }
 
 message(paste("SLURM task received state:", target_state_full_name))
 
 # 3. LOAD SOURCE DATASETS
-us_counties  <- readRDS("data/us_counties_2020.rds") %>% st_as_sf()
-hosp_sf      <- readRDS("data/clean_UNC_hosps_acute_2023.rds") %>% st_as_sf()
-centers_sf   <- readRDS("data/clean_pop_centroids_2020.rds") %>% st_as_sf()
+us_counties <- readRDS("data/us_counties_2020.rds") %>% st_as_sf()
+centers_sf  <- readRDS("data/clean_pop_centroids_2020.rds") %>% st_as_sf()
+
+
+health_sites_sf <- readRDS("data/drive_time_health_sites_2023.rds") %>% st_as_sf()
 
 
 # HELPER: poll a local TCP port until something answers (or timeout)
@@ -108,7 +122,101 @@ wait_for_server <- function(port, timeout_sec = 90, poll_every = 3) {
 }
 
 
-# MAIN PROCESSING FUNCTION FOR A SINGLE STATE
+# HELPER: compute drive-time matrices + county summary for ONE site type,
+# reusing an already-running OSRM server. Saves its own results file.
+process_site_type <- function(site_type, state_sites_all, state_centers,
+                              state_counties, state_abb) {
+  
+  message(paste0("--- Routing to nearest: ", site_type, " ---"))
+  
+  state_sites <- state_sites_all %>% filter(health_site_type == site_type)
+  
+  if (nrow(state_sites) == 0) {
+    message(paste0("No '", site_type, "' sites found in this state. Skipping this type."))
+    return(invisible(NULL))
+  }
+  
+  all_tract_results <- list()
+  
+  geo_dist_matrix <- st_distance(state_centers, state_sites)
+  
+  for (i in seq_len(nrow(state_centers))) {
+    current_tract <- state_centers[i, ]
+    
+    t_id <- current_tract$GEOID
+    c_id <- current_tract$COUNTYFP
+    
+    closest_site_idx <- order(geo_dist_matrix[i, ])[1:min(10, ncol(geo_dist_matrix))]
+    current_sites <- state_sites[closest_site_idx, ]
+    
+    current_tract_sf <- current_tract
+    current_sites_sf <- current_sites
+    
+    rownames(current_tract_sf) <- as.character(t_id)
+    rownames(current_sites_sf) <- as.character(current_sites_sf$site_id)
+    
+    osrm_matrix <- tryCatch(
+      osrmTable(
+        src = current_tract_sf,
+        dst = current_sites_sf,
+        measure = c("duration", "distance")
+      ),
+      error = function(e) {
+        message("Failed tract ", t_id, " county ", c_id, " (", site_type, "): ", e$message)
+        NULL
+      }
+    )
+    
+    if (is.null(osrm_matrix)) next
+    
+    dist_df <- as.data.frame(osrm_matrix$distances) %>%
+      mutate(tract_id = t_id) %>%
+      pivot_longer(cols = -tract_id, names_to = "site_id", values_to = "distance_meters")
+    
+    dur_df <- as.data.frame(osrm_matrix$durations) %>%
+      mutate(tract_id = t_id) %>%
+      pivot_longer(cols = -tract_id, names_to = "site_id", values_to = "duration_minutes")
+    
+    complete_tract_df <- left_join(dist_df, dur_df, by = c("tract_id", "site_id")) %>%
+      mutate(county_id = c_id)
+    
+    all_tract_results[[as.character(t_id)]] <- complete_tract_df
+  }
+  
+  if (length(all_tract_results) == 0) {
+    message(paste0("No routing matrices were generated for ", site_type, ". Skipping export."))
+    return(invisible(NULL))
+  }
+  
+  final_access_df <- bind_rows(all_tract_results)
+  
+  average_county_access <- final_access_df %>%
+    group_by(county_id, tract_id) %>%
+    filter(duration_minutes == min(duration_minutes, na.rm = TRUE)) %>%
+    ungroup() %>%
+    group_by(county_id) %>%
+    summarize(
+      avg_drive_time_minutes = mean(duration_minutes, na.rm = TRUE),
+      max_drive_time_minutes = max(duration_minutes, na.rm = TRUE),
+      min_drive_time_minutes = min(duration_minutes, na.rm = TRUE),
+      total_tracts_evaluated = n_distinct(tract_id),
+      .groups = "drop"
+    )
+  
+  final_dat <- state_counties %>%
+    left_join(average_county_access, by = c("COUNTYFP" = "county_id")) %>%
+    mutate(health_site_type = site_type, .after = COUNTYFP)
+  
+  out_file <- paste0("results/", state_abb, "_", site_type, "_drive_times.rds")
+  dir.create("results", showWarnings = FALSE, recursive = TRUE)
+  saveRDS(final_dat, out_file)
+  
+  message(paste("Saved:", out_file))
+  invisible(NULL)
+}
+
+
+# MAIN PROCESSING FUNCTION FOR A SINGLE STATE (all site types)
 
 process_state <- function(target_state_full_name) {
   
@@ -127,19 +235,28 @@ process_state <- function(target_state_full_name) {
   
   # 4. SPATIAL FILTERING & PREPARATION
   state_counties <- us_counties %>% filter(STATEFP == state_fips)
-  state_hosps    <- hosp_sf %>% filter(STATEFP == state_fips)
-  state_centers  <- centers_sf %>% filter(STATEFP == state_fips)
   
-  if (nrow(state_hosps) == 0 || nrow(state_centers) == 0) {
-    message("No hospitals or census tracts found for this state. Skipping.")
+  state_sites_all <- health_sites_sf %>%
+    filter(STATEFP == state_fips, health_site_type %in% sites)
+  
+  state_centers <- centers_sf %>% filter(STATEFP == state_fips)
+  
+  if (nrow(state_sites_all) == 0 || nrow(state_centers) == 0) {
+    message("No health sites or census tracts found for this state. Skipping.")
     return(invisible(NULL))
   }
   
-  state_centers <- st_transform(state_centers, 4326)
-  state_hosps   <- st_transform(state_hosps, 4326)
+  state_centers   <- st_transform(state_centers, 4326)
+  state_sites_all <- st_transform(state_sites_all, 4326)
+  
+  present_site_types <- intersect(sites, unique(state_sites_all$health_site_type))
+  missing_site_types <- setdiff(sites, present_site_types)
+  if (length(missing_site_types) > 0) {
+    message("No sites of these types in this state: ", paste(missing_site_types, collapse = ", "))
+  }
   
   
-  # 5. INITIALIZE LOCAL OSRM SERVER VIA APPTAINER
+  # 5. INITIALIZE LOCAL OSRM SERVER VIA APPTAINER (once per state, reused across all site types)
   
   data_dir <- ("data/OSM_states_2023")
   data_dir_clean <- normalizePath(data_dir, winslash = "/", mustWork = TRUE)
@@ -159,7 +276,7 @@ process_state <- function(target_state_full_name) {
   log_file <- file.path(log_dir, paste0("osrm_", state_full_name, "_", Sys.getenv("SLURM_ARRAY_TASK_ID", "na"), ".log"))
   pid_file <- file.path(log_dir, paste0("osrm_", state_full_name, "_", Sys.getenv("SLURM_ARRAY_TASK_ID", "na"), ".pid"))
   
-  # Use existence of the .osrm.mldgr file as the marker that extract/partition/customize already completed for this state 
+  # Use existence of the .osrm.mldgr file as the marker that extract/partition/customize already completed for this state
   mldgr_file <- file.path(data_dir_clean, paste0(state_full_name, ".osrm.mldgr"))
   
   apptainer_bind <- paste0("--bind ", data_dir_clean, ":/data")
@@ -223,86 +340,19 @@ process_state <- function(target_state_full_name) {
   options(osrm.server = paste0("http://localhost:", osrm_port, "/"))
   
   
-  # 6. EFFICIENT ROUTING (10 Nearest hospitals)
-  all_tract_results <- list()
-  
-  message("Calculating 10 nearest hospitals for each census tract via straight-line distance...")
-  
-  geo_dist_matrix <- st_distance(state_centers, state_hosps)
-  
-  for (i in seq_len(nrow(state_centers))) {
-    current_tract <- state_centers[i, ]
-    
-    t_id <- current_tract$GEOID
-    c_id <- current_tract$COUNTYFP
-    
-    closest_hosp_idx <- order(geo_dist_matrix[i, ])[1:min(10, ncol(geo_dist_matrix))]
-    current_hosps <- state_hosps[closest_hosp_idx, ]
-    
-    current_tract_sf <- current_tract
-    current_hosps_sf <- current_hosps
-    
-    rownames(current_tract_sf) <- as.character(t_id)
-    rownames(current_hosps_sf) <- as.character(current_hosps_sf$id)
-    
-    osrm_matrix <- tryCatch(
-      osrmTable(
-        src = current_tract_sf,
-        dst = current_hosps_sf,
-        measure = c("duration", "distance")
-      ),
-      error = function(e) {
-        message("Failed tract ", t_id, " county ", c_id, ": ", e$message)
-        NULL
-      }
+  # 6. ROUTE FOR EVERY SITE TYPE, REUSING THE SAME SERVER
+  for (site_type in sites) {
+    process_site_type(
+      site_type       = site_type,
+      state_sites_all = state_sites_all,
+      state_centers   = state_centers,
+      state_counties  = state_counties,
+      state_abb       = state_abb
     )
-    
-    if (is.null(osrm_matrix)) next
-    
-    dist_df <- as.data.frame(osrm_matrix$distances) %>%
-      mutate(tract_id = t_id) %>%
-      pivot_longer(cols = -tract_id, names_to = "hospital_id", values_to = "distance_meters")
-    
-    dur_df <- as.data.frame(osrm_matrix$durations) %>%
-      mutate(tract_id = t_id) %>%
-      pivot_longer(cols = -tract_id, names_to = "hospital_id", values_to = "duration_minutes")
-    
-    complete_tract_df <- left_join(dist_df, dur_df, by = c("tract_id", "hospital_id")) %>%
-      mutate(county_id = c_id)
-    
-    all_tract_results[[as.character(t_id)]] <- complete_tract_df
   }
   
-  if (length(all_tract_results) == 0) {
-    message("No routing matrices were generated for this state. Skipping export.")
-  } else {
-    
-    # 7. COMBINE AND SUMMARY METRICS
-    final_access_df <- bind_rows(all_tract_results)
-    
-    average_county_access <- final_access_df %>%
-      group_by(county_id, tract_id) %>%
-      filter(duration_minutes == min(duration_minutes, na.rm = TRUE)) %>%
-      ungroup() %>%
-      group_by(county_id) %>%
-      summarize(
-        avg_drive_time_minutes = mean(duration_minutes, na.rm = TRUE),
-        max_drive_time_minutes = max(duration_minutes, na.rm = TRUE),
-        min_drive_time_minutes = min(duration_minutes, na.rm = TRUE),
-        total_tracts_evaluated = n_distinct(tract_id),
-        .groups = "drop"
-      )
-    
-    # 8. GENERATE EXPORTS
-    final_dat <- state_counties %>%
-      left_join(average_county_access, by = c("COUNTYFP" = "county_id"))
-    
-    saveRDS(final_dat, paste0("results/", state_abb, "_acute_hosp_drive_times.rds"))
-    
-    message(paste("Processing complete for", toupper(state_abb), ". Files saved!"))
-  }
   
-  # 9. TEARDOWN: kill the backgrounded osrm-routed process
+  # 7. TEARDOWN: kill the backgrounded osrm-routed process
   message("Stopping local OSRM server...")
   if (file.exists(pid_file)) {
     pid <- readLines(pid_file, warn = FALSE)[1]
