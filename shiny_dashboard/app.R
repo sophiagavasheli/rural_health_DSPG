@@ -37,7 +37,7 @@ va_map_choices = c(
 )
 
 ## drive time map
-ac_dr_times = readRDS("us_acute_hosp_drive_times.rds")
+ac_dr_times = readRDS("us_acute_hosp_drive_times_2023.rds")
 us_counties = readRDS("us_counties_2020.rds")
 states_sf <- states(year = 2023, class = "sf") %>% st_transform(4326)
 

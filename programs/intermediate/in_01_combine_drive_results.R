@@ -20,5 +20,10 @@ final = drive_times %>%
 
 saveRDS(
   final,
-    "data/outcome/OSM/drive_times/us_acute_hosp_drive_times.rds"
+    "data/outcome/OSM/us_acute_hosp_drive_times_2023.rds"
+)
+
+saveRDS(
+  final,
+  "shiny_dashboard/us_acute_hosp_drive_times_2023.rds"
 )
