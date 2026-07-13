@@ -1,12 +1,10 @@
 # make filtered dataset for random forest models
 
 library(dplyr)
-library(sf)
 
 dat <- readRDS("data/analysis/clean_ALL_data.rds")
 dash = readRDS("shiny_dashboard/dashboard_data.rds")
 
-# random forest data prep
 outcomes <- c(
   "CHR_PCT_MENTAL_DISTRESS",
   "CHR_PCT_LOW_BIRTH_WT",
@@ -40,7 +38,8 @@ rf_dat <- dat %>%
   select(YEAR, COUNTYFIPS, all_of(rf_vars)) %>%
   select(YEAR, COUNTYFIPS, USDA_rural_indicator_2013,
          FCC_res_connections_10_mbps, contains("RATE"), contains("PCT")) %>% 
-  filter(YEAR > 2009)
+  filter(YEAR > 2009) %>% 
+  filter(as.numeric(COUNTYFIPS) < 57000) # filter out us territories
 
 saveRDS(
   rf_dat,
