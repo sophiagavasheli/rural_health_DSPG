@@ -1,6 +1,6 @@
 # rural_health_DSPG
 
-## Directory Structure
+## 📁 Directory Structure 
 
 ```
 rural_health_DSPG/
@@ -33,7 +33,7 @@ rural_health_DSPG/
 - `reference/`contains technical documentation for the datasets
 - `archive/` folders contain scripts and data that were not used in the final dashboard
 
-## Script Names
+## 📄Script Names
 
 Each name has three parts:
 1. Two-letter abbreviation of the folder it's in e.g., `an` or `cl`
@@ -42,7 +42,7 @@ Each name has three parts:
 
 If a script is not named according to this convention, then it is a helper script called from another script
 
-## Reproducibility
+## 🔁Reproducibility
 - Run the scripts according to their order: `clean` then `analysis`.
 - Some of the outcome data, especially the `osm.pbf` files, are too large to store on GitHub, so make sure to generate everything with the scripts.
 - Archived scripts and data were not used in the final dashboard, but can be useful to see the evolution of the project. They also show how to clean data from sources like ACS and CDC, which the CLH database pulls from. See the Data Availability Dashboard and Data Sources pages on the Shiny app to learn more.
@@ -50,7 +50,7 @@ If a script is not named according to this convention, then it is a helper scrip
   - The directory paths in ARC scripts do not correspond to the directory structure of this repo since I was working in my home directory. Copy data and scripts correctly if you want to regenerate the results.
 - To calculate drive times, I initially used Docker Desktop to run the local server to query the OSM roads. This script is archived. The final pipeline was completed using apptainer on ARC.
 
-## Data Collection Details
+## 📊Data Collection Details
 The following table describes how the data was collected for reproducibility.
 | Data Source                                                                                                                                            | Variables                                                                | Processing                                                                                                                                                                                                                     | Years Available            | Geography      |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- | -------------- |
