@@ -8,7 +8,30 @@ library(ggplot2)
 library(stringr)
 
 var_lookup <- read.csv("reference/all_codebook.csv") %>%
-  select(Variable.Name, Variable.Label)
+  select(Variable.Name, Variable.Label) %>%
+  bind_rows(
+    tribble(
+      ~Variable.Name, ~Variable.Label,
+      "acute_care_hospital_avg_drive_time_minutes", "Average Drive Time to Acute Care Hospital (min)",
+      "clinic_urgent_care_avg_drive_time_minutes", "Average Drive Time to Clinic/Urgent Care (min)",
+      "dentist_avg_drive_time_minutes", "Average Drive Time to Dentist (min)",
+      "doctors_medical_specialists_avg_drive_time_minutes", "Average Drive Time to Doctors & Medical Specialists (min)",
+      "mental_health_avg_drive_time_minutes", "Average Drive Time to Mental Health Facility (min)",
+      "pharmacy_avg_drive_time_minutes", "Average Drive Time to Pharmacy (min)",
+      "acute_care_hospital_max_drive_time_minutes", "Maximum Drive Time to Acute Care Hospital (min)",
+      "clinic_urgent_care_max_drive_time_minutes", "Maximum Drive Time to Clinic/Urgent Care (min)",
+      "dentist_max_drive_time_minutes", "Maximum Drive Time to Dentist (min)",
+      "doctors_medical_specialists_max_drive_time_minutes", "Maximum Drive Time to Doctors & Medical Specialists (min)",
+      "mental_health_max_drive_time_minutes", "Maximum Drive Time to Mental Health Facility (min)",
+      "pharmacy_max_drive_time_minutes", "Maximum Drive Time to Pharmacy (min)",
+      "acute_care_hospital_min_drive_time_minutes", "Minimum Drive Time to Acute Care Hospital (min)",
+      "clinic_urgent_care_min_drive_time_minutes", "Minimum Drive Time to Clinic/Urgent Care (min)",
+      "dentist_min_drive_time_minutes", "Minimum Drive Time to Dentist (min)",
+      "doctors_medical_specialists_min_drive_time_minutes", "Minimum Drive Time to Doctors & Medical Specialists (min)",
+      "mental_health_min_drive_time_minutes", "Minimum Drive Time to Mental Health Facility (min)",
+      "pharmacy_min_drive_time_minutes", "Minimum Drive Time to Pharmacy (min)"
+    )
+  )
 
 # health outcome labels
 many_yrs <- tribble(
