@@ -19,7 +19,6 @@ outcomes <- c(
 
 # imputation (replace with median)
 imputed = dat %>% 
-  select(-YEAR) %>% 
   arrange(COUNTYFIPS) %>% 
   mutate(COUNTYFIPS = as.factor(COUNTYFIPS)) %>% 
   na.roughfix()
@@ -27,7 +26,7 @@ imputed = dat %>%
 
 not_predictors = c("CDCW_DRUG_DTH_RATE", "CHR_PCT_LOW_BIRTH_WT",
                    "CDCW_INJURY_DTH_RATE","CDCW_SELFHARM_DTH_RATE",
-                   "CDCW_crude_death_rate", "COUNTYFIPS")
+                   "CDCW_crude_death_rate", "COUNTYFIPS", "YEAR")
 
 predictors <- setdiff(names(imputed), not_predictors)
 

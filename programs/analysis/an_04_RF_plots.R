@@ -10,8 +10,8 @@ library(stringr)
 var_lookup <- read.csv("reference/all_codebook.csv") %>%
   select(Variable.Name, Variable.Label)
 
-
-health_labels <- tribble(
+# health outcome labels
+many_yrs <- tribble(
   ~variable,                          ~label,
   "CDCA_STROKE_DTH_RATE_ABOVE35",     "Stroke Mortality Rate (Age 35+)",
   "CDCW_SELFHARM_DTH_RATE",           "Self-Harm Mortality Rate",
@@ -21,7 +21,16 @@ health_labels <- tribble(
   "CHR_PCT_MENTAL_DISTRESS",          "Frequent Mental Distress Prevalence"
 )
 
-analyze_rf <- function(dir){
+w_drv_time <- tribble(
+  ~variable,                          ~label,
+  "CDCW_SELFHARM_DTH_RATE",           "Self-Harm Mortality Rate",
+  "CDCW_INJURY_DTH_RATE",             "Injury Mortality Rate",
+  "CHR_PCT_LOW_BIRTH_WT",             "Low Birth Weight Prevalence",
+  "CDCW_DRUG_DTH_RATE",               "Drug Mortality Rate",
+  "CDCW_crude_death_rate",            "Overall Mortality Rate"
+)
+
+analyze_rf <- function(dir, health_labels){
   
   # directories
   input_dir <- paste0("data/output/", dir)
@@ -389,7 +398,9 @@ analyze_rf <- function(dir){
   
 } # end func
 
-#results <- analyze_rf("all_params_tuned")
+#results <- analyze_rf("all_params_tuned", many_yrs)
 
-results <- analyze_rf("all_params_tuned_plus_year_effects")
+#results <- analyze_rf("all_params_tuned_plus_year_effects", many_yrs)
+
+results <- analyze_rf("drive_time_model", w_drv_time)
 
