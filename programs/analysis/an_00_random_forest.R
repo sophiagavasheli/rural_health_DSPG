@@ -47,6 +47,37 @@ model_metrics <- function(observed, predicted) {
   )
 }
 
+# function to remove year effects for X
+remove_year_effects <- function(train, test, predictors) {
+  
+  X_train_adj <- train[, predictors, drop = FALSE]
+  X_test_adj  <- test[, predictors, drop = FALSE]
+  
+  for (v in predictors) {
+    
+    fit <- lm(
+      reformulate("YEAR", response = v),
+      data = transform(train, YEAR = factor(YEAR))
+    )
+    
+    X_train_adj[[v]] <- residuals(fit)
+    
+    X_test_adj[[v]] <- test[[v]] -
+      predict(
+        fit,
+        newdata = data.frame(
+          YEAR = factor(test$YEAR,
+                        levels = levels(factor(train$YEAR)))
+        )
+      )
+  }
+  
+  list(
+    train = as.matrix(X_train_adj),
+    test = as.matrix(X_test_adj)
+  )
+}
+
 
 # function to build RF model based on passed in health outcome
 rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2000, tune_setting = "all", dir) {
@@ -80,48 +111,61 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
   overlap_counties <- intersect(unique(train_df$COUNTYFIPS), unique(test_df$COUNTYFIPS))
   stopifnot(length(overlap_counties) == 0)
   
-  message("Training counties: ", length(unique(train_df$COUNTYFIPS)))
-  message("Testing counties: ", length(unique(test_df$COUNTYFIPS)))
-  message("Training rows: ", nrow(train_df))
-  message("Testing rows: ", nrow(test_df))
   
-  
-  X_train <- train_df %>%
-    select(all_of(predictors)) %>%
-    as.matrix()
-  
+  # y train/test
   y_train <- train_df[[outcome]]
-  
-  X_test <- test_df %>%
-    select(all_of(predictors)) %>%
-    as.matrix()
-  
   y_test <- test_df[[outcome]]
   
-  message("X_train dimensions: ", paste(dim(X_train), collapse = " x "))
-  message("X_test dimensions: ", paste(dim(X_test), collapse = " x "))
   
-  # full model
+  # remove year effects for y
+  year_model <- lm(y_train ~ factor(train_df$YEAR))
+  
+  # Updated training outcome
+  fit_y <- lm(
+    outcome ~ YEAR,
+    data = data.frame(
+      outcome = y_train,
+      YEAR = factor(train_df$YEAR)
+    )
+  )
+  
+  y_train_updated <- residuals(fit_y)
+  
+  y_test_updated <- y_test -
+    predict(
+      fit_y,
+      newdata = data.frame(
+        YEAR = factor(test_df$YEAR,
+                      levels = levels(factor(train_df$YEAR)))
+      )
+    )
+  
+ # X train/test and year effects removed
+  adj <- remove_year_effects(train_df, test_df, predictors)
+  
+  X_train_updated <- adj$train
+  X_test_updated  <- adj$test
+  
+  message("data setup done")
+  
+  # full RF model
   rf_full <- regression_forest(
-    X = X_train,
-    Y = y_train,
+    X = X_train_updated,
+    Y = y_train_updated,
     num.trees = num_trees,
     tune.parameters = tune_setting,
-    seed = seed
+    seed = seed,
+    clusters = train_df$COUNTYFIPS
   )
+  
+  message("full RF done")
   
   # predict w/ full model
   train_pred <- predict(rf_full)$predictions
-  test_pred <- predict(rf_full, X_test)$predictions
+  test_pred <- predict(rf_full, X_test_updated)$predictions
   
-  train_performance <- model_metrics(y_train, train_pred)
-  test_performance  <- model_metrics(y_test, test_pred)
-  
-  message("Training performance:")
-  print(train_performance)
-  
-  message("Testing performance:")
-  print(test_performance)
+  train_performance <- model_metrics(y_train_updated, train_pred)
+  test_performance  <- model_metrics(y_test_updated, test_pred)
   
   importance_df <- tibble(
     variable = predictors,
@@ -137,22 +181,25 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
   print(top_variables)
   
   # refit with important vars
-  X_train_selected <- X_train[, top_variables, drop = FALSE]
-  X_test_selected  <- X_test[, top_variables, drop = FALSE]
+  X_train_selected <- X_train_updated[, top_variables, drop = FALSE]
+  X_test_selected  <- X_test_updated[, top_variables, drop = FALSE]
   
   rf_selected <- regression_forest(
     X = X_train_selected,
-    Y = y_train,
+    Y = y_train_updated,
     num.trees = num_trees,
     tune.parameters = tune_setting,
-    seed = seed
+    seed = seed,
+    clusters = train_df$COUNTYFIPS
   )
+  
+  message("selected RF done")
   
   selected_test_pred <- predict(rf_selected, X_test_selected)$predictions
   selected_train_pred <- predict(rf_selected)$predictions
   
-  selected_test_performance <- model_metrics(y_test, selected_test_pred)
-  selected_train_performance <- model_metrics(y_train, selected_train_pred)
+  selected_test_performance <- model_metrics(y_test_updated, selected_test_pred)
+  selected_train_performance <- model_metrics(y_train_updated, selected_train_pred)
   
   
   performance_summary <- bind_rows(
@@ -169,7 +216,7 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
   predictions_output <- tibble(
     YEAR = test_df$YEAR,
     COUNTYFIPS = test_df$COUNTYFIPS,
-    observed = y_test,
+    observed = y_test_updated,
     predicted_full_model = test_pred,
     predicted_selected_model = selected_test_pred
   )
@@ -180,29 +227,35 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
     dir.create(path, recursive = TRUE)
   }
   
+  #parameter vals
+  tuned_params_full <- rf_full$tunable.params
+  tuned_params_selected <- rf_selected$tunable.params
+  
   save(
     rf_full,
     rf_selected,
+    tuned_params_full,
+    tuned_params_selected,
     performance_summary,
     importance_df,
     top_variables,
     predictions_output,
-    file = paste0("data/output/", outcome, "_grf_results.RData")
-  )
+    file = file.path(path, paste0(outcome, "_grf_results.RData"))  
+    )
   
 } 
 
 
 # run models
 ## dates from data availability dashboard
-stroke_dth <- rf_model(clean,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35", "all_params_tuned")
+stroke_dth <- rf_model(clean,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35", dir="all_params_tuned_plus_year_effects")
 
-self_harm_dth <- rf_model(clean,2010,2023,"CDCW_SELFHARM_DTH_RATE", "all_params_tuned")
+self_harm_dth <- rf_model(clean,2010,2023,"CDCW_SELFHARM_DTH_RATE", dir="all_params_tuned_plus_year_effects")
 
-injury_dth <- rf_model(clean,2010,2023,"CDCW_INJURY_DTH_RATE", "all_params_tuned")
+injury_dth <- rf_model(clean,2010,2023,"CDCW_INJURY_DTH_RATE", dir="all_params_tuned_plus_year_effects")
 
-obesity <- rf_model(clean,2010,2017,"CHR_PCT_ADULT_OBESITY", "all_params_tuned")
+obesity <- rf_model(clean,2010,2017,"CHR_PCT_ADULT_OBESITY", dir="all_params_tuned_plus_year_effects")
 
-low_birth <- rf_model(clean,2010,2014,"CHR_PCT_LOW_BIRTH_WT", "all_params_tuned")
+low_birth <- rf_model(clean,2010,2014,"CHR_PCT_LOW_BIRTH_WT", dir="all_params_tuned_plus_year_effects")
 
-mental <- rf_model(clean,2014,2022,"CHR_PCT_MENTAL_DISTRESS", "all_params_tuned")
+mental <- rf_model(clean,2014,2022,"CHR_PCT_MENTAL_DISTRESS", dir="all_params_tuned_plus_year_effects")

@@ -51,9 +51,7 @@ analyze_rf <- function(dir){
   )
   
 
-  # ---------------------------
   # Performance
-  # ---------------------------
   
   performance <- map_dfr(files, function(f){
     load(f)
@@ -143,10 +141,9 @@ analyze_rf <- function(dir){
   
   
   
-  # ---------------------------
+
   # Variable importance
-  # ---------------------------
-  
+
   importance_all <- map_dfr(files, function(f){
     load(f)
     
@@ -181,7 +178,7 @@ analyze_rf <- function(dir){
         y=mean_importance
       )
     ) +
-    geom_col(color = "maroon4") +
+    geom_col(fill = "maroon4") +
     coord_flip() +
     scale_x_discrete(
       labels=function(x) str_wrap(x,30)
@@ -201,10 +198,9 @@ analyze_rf <- function(dir){
   
   
   
-  # ---------------------------
+
   # Predictions
-  # ---------------------------
-  
+
   predictions <- map_dfr(files,function(f){
     
     load(f)
@@ -321,10 +317,9 @@ analyze_rf <- function(dir){
     "residuals_vs_predicted_selected.png"
   )
   
-  # ---------------------------
+
   # Variable importance by health outcome
-  # ---------------------------
-  
+
   importance_dir <- file.path(
     figure_dir,
     "variable_importance"
@@ -375,7 +370,6 @@ analyze_rf <- function(dir){
     
   }
   
-  # generate plots
   pwalk(
     list(
       outcome_name = health_labels$variable,
@@ -395,4 +389,7 @@ analyze_rf <- function(dir){
   
 } # end func
 
-results <- analyze_rf("all_params_tuned")
+#results <- analyze_rf("all_params_tuned")
+
+results <- analyze_rf("all_params_tuned_plus_year_effects")
+
