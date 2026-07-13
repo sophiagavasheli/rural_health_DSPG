@@ -220,12 +220,12 @@ h1 {
 ========================================== */
 
 a {
-  color: #2d6a4f;
+  color: #007fa0;
 }
 
 a:hover {
-  color: #1b4332;
-  text-decoration: none;
+  color: #0057a0;
+  text-decoration: underline;
 }
 
 /* ==========================================
