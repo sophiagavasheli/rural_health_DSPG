@@ -1,6 +1,6 @@
 # rural_health_DSPG
 
-## Directory structure
+## Directory Structure
 
 ```
 rural_health_DSPG/
@@ -47,6 +47,7 @@ If a script is not named according to this convention, then it is a helper scrip
 - Some of the outcome data, especially the `osm.pbf` files, are too large to store on GitHub, so make sure to generate everything with the scripts.
 - Archived scripts and data were not used in the final dashboard, but can be useful to see the evolution of the project. They also show how to clean data from sources like ACS and CDC, which the CLH database pulls from. See the Data Availability Dashboard and Data Sources pages on the Shiny app to learn more.
 - A few of the shell scripts were run with `sbatch` on [VT Advanced Research Computing](https://www.docs.arc.vt.edu/index.html) resources due to the very large file sizes of OpenStreetMap data. Further details are in the scripts.
+  - The directory paths in ARC scripts do not correspond to the directory structure of this repo since I was working in my home directory. Copy data and scripts correctly if you want to regenerate the results.
 - To calculate drive times, I initially used Docker Desktop to run the local server to query the OSM roads. This script is archived. The final pipeline was completed using apptainer on ARC.
 
 ## Data Collection Details
