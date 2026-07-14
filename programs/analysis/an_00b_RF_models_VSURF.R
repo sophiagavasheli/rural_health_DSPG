@@ -1,9 +1,18 @@
 # feature selection with VSURF and random forest models with GRF
 
+# this script was run through ARC
+
 library(VSURF)
 library(dplyr)
 library(grf)
 library(tibble)
+
+# get num cores
+ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
+
+if (is.na(ncores) || ncores < 1) {
+  ncores <- parallel::detectCores(logical = FALSE)
+}
 
 dat = readRDS("data/analysis/random_forest_dat_2010_2023.rds")
 
@@ -143,7 +152,10 @@ rf_model <- function(data, start_yr, end_yr, outcome, dir) {
   # feature selection
   vsurf_fit <- VSURF(
     x = X_train_updated,
-    y = y_train_updated
+    y = y_train_updated,
+    parallel = TRUE,
+    ncores = ncores,
+    clusterType = "FORK"
   )
   
   message("feature selection done")
@@ -158,9 +170,9 @@ rf_model <- function(data, start_yr, end_yr, outcome, dir) {
   
   # variable importance
   imp <- data.frame(
-    variable = colnames(X_train_updated)[vsurf$imp.mean.dec.ind],
-    importance = vsurf$imp.mean.dec,
-    sd = vsurf$imp.sd.dec
+    variable = colnames(X_train_updated)[vsurf_fit$imp.mean.dec.ind],
+    importance = vsurf_fit$imp.mean.dec,
+    sd = vsurf_fit$imp.sd.dec
   )
   
   # selected model

@@ -58,7 +58,7 @@ echo "Array task $SLURM_ARRAY_TASK_ID -> state: $STATE (OSRM port $OSRM_PORT)"
 module load apptainer
 module load R-bundle-CRAN/2025.11-foss-2025b
 
-Rscript health_site_drive_times.R "$STATE"
+Rscript an_00b_health_site_drive_times.R "$STATE"
 
 
 
