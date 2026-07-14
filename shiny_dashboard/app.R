@@ -6,49 +6,36 @@ library(tigris)
 library(sf)
 library(dplyr)
 library(viridis)
+library(bslib)
 
 
 # data loading -------------------------------------------------------
 
-## va health
-va_map = readRDS("va_health.rds")
+## data availability dashboard
+avail_dash_dat <- readRDS("dashboard_data.rds")
 
-va_map_choices = c(
-  "Years of Potential Life Lost" = "CHR_YRS_LIFE_LOST",
-  "Diabetes (%)" = "CHR_PCT_DIABETES",
-  "Low Birth Weight (%)" = "CHR_PCT_LOW_BIRTH_WT",
-  "Premature Death Rate" = "CHR_PREMAT_DEATH_RATE",
-  "Adult Obesity (%)" = "CHR_PCT_ADULT_OBESITY",
-  "Alcohol Driving Deaths (%)" = "CHR_PCT_ALCOHOL_DRIV_DEATH",
-  "Crude Death Rate" = "CDCW_crude_death_rate",
-  "Depression (%)" = "CDCP_DEPRESSION_ADULT_C",
-  "Hospital Beds Rate" = "AHRF_HOSP_BED_RATE",
-  "Hospitals Rate" = "AHRF_HOSPS_RATE",
-  "Obstetric Hospitals Rate" = "POS_HOSP_OBSTETRIC_RATE",
-  "OB/GYN Provider Rate" = "AHRF_OB_GYN_RATE",
-  "Medical Specialists Rate" = "AHRF_MED_SPEC_RATE",
-  "Alcohol Treatment Hospital Rate" = "POS_HOSP_ALC_RATE",
-  "Cardiology Specialists Rate" = "AHRF_CARDIOVAS_SPEC_RATE",
-  "Drive to Work (%)" = "ACS_PCT_DRIVE_2WORK",
-  "Public Transit to Work (%)" = "ACS_PCT_PUBL_TRANSIT",
-  "Mental Health Provider Rate" = "CHR_MENTAL_PROV_RATE",
-  "10 Mbps Household Broadband Connections" = "FCC_res_connections_10_mbps",
-  "All Broadband Connections" = "FCC_county_all_connections"
-)
+years <- 2009:2023
+
+## health and infrastructure map
+#inf_health = readRDS("")
 
 ## drive time map
-ac_dr_times = readRDS("us_acute_hosp_drive_times_2023.rds")
+drive_times = readRDS("health_site_drive_times_2023.rds")
 us_counties = readRDS("us_counties_2020.rds")
 states_sf <- states(year = 2023, class = "sf") %>% st_transform(4326)
+
+drive_time_choices <- c(
+  "Acute Care Hospital" = "acute_care_hospital",
+  "Clinic & Urgent Care" = "clinic_urgent_care",
+  "Dentist" = "dentist",
+  "Doctor & Medical Specialist" = "doctors_medical_specialists",
+  "Mental Health & Psychiatric Hospital" = "mental_health",
+  "Pharmacy" = "pharmacy"
+)
 
 ## health sites map
 health_sites = readRDS("us_health_sites_2023.rds")
   
-
-## dashboard data
-long_data <- readRDS("dashboard_data.rds")
-
-years <- 2009:2023
 
 # UI ----------------------------------------------------------------------
 ui <- navbarPage("Rural Health and Infrastructure",
@@ -295,9 +282,9 @@ tabPanel(
              sliderInput(
                "yearRange",
                "Year Range:",
-               min = min(long_data$Year),
-               max = max(long_data$Year),
-               value = c(min(long_data$Year), max(long_data$Year)),
+               min = min(avail_dash_dat$Year),
+               max = max(avail_dash_dat$Year),
+               value = c(min(avail_dash_dat$Year), max(avail_dash_dat$Year)),
                step = 1,
                sep = ""
              )
@@ -307,8 +294,8 @@ tabPanel(
              checkboxGroupInput(
                "availability",
                "Yearly Availability:",
-               choices = unique(long_data$Yearly.Availability.Level),
-               selected = unique(long_data$Yearly.Availability.Level)
+               choices = unique(avail_dash_dat$Yearly.Availability.Level),
+               selected = unique(avail_dash_dat$Yearly.Availability.Level)
              )
       ),
       #coverage checkbox
@@ -316,8 +303,8 @@ tabPanel(
              checkboxGroupInput( 
                "coverage", 
                 "Average County Coverage Level:", 
-                choices = unique(long_data$Global.County.Coverage.Level), 
-                selected = unique(long_data$Global.County.Coverage.Level) 
+                choices = unique(avail_dash_dat$Global.County.Coverage.Level), 
+                selected = unique(avail_dash_dat$Global.County.Coverage.Level) 
                )
              
       ),
@@ -612,60 +599,63 @@ tabPanel(
 # maps -------------------------------------------------------------------
 tabPanel(
   "Maps",
-  
-  fluidRow(
-    sidebarLayout(
-      sidebarPanel(
-        p("Health Outcomes and Infrastructure, 2022"),
-        
-        selectInput(
-          "variable",
-          "Variable",
-          choices = va_map_choices
-        )
-      ),
-      mainPanel(
-        leafletOutput("va_health", height = "800px") 
-      )
-      
-    )
-  ),
-  
-  fluidRow(
-    sidebarLayout(
-      sidebarPanel(
-        p("Health Sites, 2023"),
-        
-        # filter bar
-        selectInput(
-          "type_filter",
-          "Health site type:",
-          choices = c("All", sort(unique(health_sites$health_site_label))),
-          selected = "All"
-        ),
-        
-        p("Hospitals are sourced from the UNC Shep's Center and the other health sites are sourced from OSM. Please be aware that OSM sites are user generated and many sites might be missing on this map.")
-      ),
-      
-      mainPanel(
-        leafletOutput("health_sites_map", height = "800px")    
-      )
-      
-    )
-  ),
-  
-  fluidRow(
-    sidebarLayout(
-    sidebarPanel(
-      p("Average drive time to the nearest acute hospital, 2023"),
-    ),
+  navset_pill( 
+    nav_panel("Infrastructure and Health Outcomes", 
+              sidebarLayout(
+                sidebarPanel(
+                  
+                  p("Please note that variables change year to year based on availability.")
+                ),
+                mainPanel(
+                  leafletOutput("health_map", height = "800px") 
+                )
+                
+              )
+              ), 
+    nav_panel("Drive Times", 
+              sidebarLayout(
+                sidebarPanel(
+                  
+                  selectInput(
+                    "site_type",
+                    "Drive time to the nearest:",
+                    choices = drive_time_choices,
+                    selected = "Acute Care Hospital"
+                  ),
+                  
+                  p("Please see the Analysis page for the methods used to generate this data and the Health Sites map to see the locations of the sites.")
+                ),
+                
+                mainPanel(
+                  leafletOutput("drive_map", height = "800px")    
+                )
+                
+              )
+              ), 
+    nav_panel("Health Sites", 
+              sidebarLayout(
+                sidebarPanel(
+
+                  # filter bar
+                  selectInput(
+                    "type_filter",
+                    "Health site type:",
+                    choices = c("All", sort(unique(health_sites$health_site_label))),
+                    selected = "All"
+                  ),
+                  
+                  p("Hospitals are sourced from the UNC Shep's Center and the other health sites are sourced from OSM. Please be aware that OSM sites are user generated and many sites might be missing on this map.")
+                ),
+                
+                mainPanel(
+                  leafletOutput("health_sites_map", height = "800px")    
+                )
+                
+              )
+              ), 
     
-    mainPanel(
-      leafletOutput("ac_dr_map", height = "800px")    
-      )
-    
-  )
-  )
+  ), 
+  id = "tab" 
 ), 
 
 # analysis ----------------------------------------------------------------
@@ -761,95 +751,56 @@ server <- function(input, output, session) {
 
 # maps ---------------------------------------------------------------------
   
-  ## va health map
-  output$va_health <- renderLeaflet({
-    
-    vals <- va_map[[input$variable]]
-    
-    pal <- colorNumeric(
-      palette = "viridis",
-      domain = vals,
-      na.color = "lightgray"
-    )
-    
-    leaflet(data = va_map) %>%
-      addProviderTiles(providers$CartoDB.Positron) %>%
-      setView(lng = -80, lat = 37, zoom = 6) %>% 
-      
-      addPolygons(
-        fillColor = ~pal(vals),
-        fillOpacity = 0.8,
-        color = "white",
-        weight = 1,
-        smoothFactor = 0.2,
-        label = ~paste0(
-          COUNTY,
-          "<br>",
-          "Value",
-          ": ",
-          round(vals, 2)
-        ) |>
-          lapply(htmltools::HTML),
-        highlightOptions = highlightOptions(
-          weight = 2,
-          color = "black",
-          bringToFront = TRUE
-        )
-      ) %>%
-      addLegend(
-        pal = pal,
-        values = vals,
-        title = "Value",
-        position = "bottomright"
-      )
-  })
+  ## health infrastructure map
   
   
   ## drive time map 
-  pal <- colorBin(
-    palette = "YlOrRd",
-    domain = ac_dr_times$avg_drive_time_minutes,
-    bins = c(0, 15, 30, 45, 60, 90, 120, Inf),
-    na.color = "gray90"
-  )
+  drive_filt <- reactive({
+    drive_times %>%
+      dplyr::filter(health_site_type == input$site_type)
+  })
   
-  output$ac_dr_map <- renderLeaflet({
+  output$drive_map <- renderLeaflet({
     
-    leaflet() %>%
+    dat <- drive_filt() 
+
+    pal <- colorBin(
+      palette = "YlOrRd",
+      domain = dat$avg_drive_time_minutes,
+      bins = c(0, 15, 30, 45, 60, 90, 120, Inf),
+      na.color = "gray90"
+    )
+    
+    leaflet(dat) %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
-      setView(lng = -80, lat = 37, zoom = 6) %>% 
+      fitBounds(lng1 = -125, lat1 = 24,lng2 = -66, lat2 = 50) %>% 
       
-      # Counties layer
       addPolygons(
-        data = ac_dr_times,
         fillColor = ~pal(avg_drive_time_minutes),
         fillOpacity = 0.7,
         color = "white",
         weight = 0.5,
         popup = ~paste0(
           "<b>County:</b> ", NAME, "<br>",
-          "<b>Avg Drive Time:</b> ", round(avg_drive_time_minutes, 1), " min"
+          "<b> Average Drive Time (min) :</b> ",
+          round(avg_drive_time_minutes, 1), " min"
         )
       ) %>%
       
-      # State outlines
       addPolygons(
         data = states_sf,
         fill = FALSE,
         color = "lightgray",
         weight = 1,
-        opacity = 0.6,
-        smoothFactor = 0
+        opacity = 0.6
       ) %>%
       
-      # Legend
       addLegend(
         position = "bottomright",
         pal = pal,
-        values = ac_dr_times$avg_drive_time_minutes,
+        values = dat$avg_drive_time_minutes,
         title = "Average Drive Time (min)"
       )
-    
   })
   
   ## health site map
@@ -873,7 +824,7 @@ server <- function(input, output, session) {
     
     leaflet(health_site_df) %>%
       addProviderTiles("CartoDB.Positron") %>%
-      setView(lng = -80, lat = 37, zoom = 6) %>%
+      fitBounds(lng1 = -125, lat1 = 24,lng2 = -66, lat2 = 50) %>% 
       
       addCircleMarkers(
         radius = 4,
@@ -898,16 +849,16 @@ server <- function(input, output, session) {
 
   # data avail dash ---------------------------------------------------------
   
-  years <- sort(unique(long_data$Year))
+  years <- sort(unique(avail_dash_dat$Year))
   
   selectedDomain <- reactiveVal("All")
   
   
-  # DOMAIN BUTTONS (static — only depends on long_data, not filtered data)
+  # DOMAIN BUTTONS (static — only depends on avail_dash_dat, not filtered data)
   
   output$domainButtons <- renderUI({
     
-    domains <- c("All", sort(unique(long_data$Domain)))
+    domains <- c("All", sort(unique(avail_dash_dat$Domain)))
     
     tags$div(
       class = "domain-btn-row",
@@ -933,7 +884,7 @@ server <- function(input, output, session) {
   # STAGE 1 — only recomputes when yearRange changes
   
   yearFiltered <- reactive({
-    long_data %>%
+    avail_dash_dat %>%
       mutate(Year = as.integer(Year)) %>%
       filter(
         Year >= input$yearRange[1],
@@ -1135,11 +1086,11 @@ server <- function(input, output, session) {
     
     var <- input$clicked_var
     
-    meta <- long_data %>%
+    meta <- avail_dash_dat %>%
       filter(Variable.Name == var) %>%
       slice(1)
     
-    detail <- long_data %>%
+    detail <- avail_dash_dat %>%
       filter(Variable.Name == var) %>%
       arrange(Year) %>%
       select(Year, Yearly.County.Coverage.Pct, Yearly.County.Coverage.Level, Active.Counties)
