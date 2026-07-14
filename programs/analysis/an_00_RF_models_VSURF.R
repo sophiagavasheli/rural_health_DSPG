@@ -1,39 +1,15 @@
-# random forest models
+# feature selection with VSURF and random forest models with GRF
 
-library(grf)
+library(VSURF)
 library(dplyr)
-library(randomForest)
+library(grf)
 library(tibble)
-library(purrr)
 
 dat = readRDS("data/analysis/random_forest_dat_2010_2023.rds")
 
-# health outcomes
-outcomes = c("CHR_PCT_MENTAL_DISTRESS", "CHR_PCT_LOW_BIRTH_WT", "CHR_PCT_ADULT_OBESITY", "CDCW_INJURY_DTH_RATE", "CDCW_SELFHARM_DTH_RATE",  "CDCA_STROKE_DTH_RATE_ABOVE35")
-
-# imputation (replace with median)
-imputed = dat %>% 
-  arrange(YEAR, COUNTYFIPS) %>% 
-  mutate(COUNTYFIPS = as.factor(COUNTYFIPS)) %>% 
-  group_split(YEAR) %>%
-  map_dfr(~ na.roughfix(.x))
-
-#some of the variables are entirely missing from a year
-vars_to_remove <- imputed %>%
-  select(-all_of(outcomes)) %>%           # ignore health outcomes
-  group_by(YEAR) %>%
-  summarise(across(where(is.numeric), ~ all(is.na(.))), .groups = "drop") %>%
-  select(-YEAR) %>%  # don't want to exclude year
-  select(where(any)) %>%
-  names()
-
-clean <- imputed %>%
-  select(-all_of(vars_to_remove))
-
 not_predictors = c("CHR_PCT_MENTAL_DISTRESS", "CHR_PCT_LOW_BIRTH_WT", "CHR_PCT_ADULT_OBESITY", "CDCW_INJURY_DTH_RATE", "CDCW_SELFHARM_DTH_RATE",  "CDCA_STROKE_DTH_RATE_ABOVE35", "YEAR", "COUNTYFIPS")
 
-predictors <- setdiff(names(clean), not_predictors)
-
+predictors <- setdiff(names(dat), not_predictors)
 
 # model performance helper
 model_metrics <- function(observed, predicted) {
@@ -75,11 +51,10 @@ remove_year_effects <- function(train, test, predictors) {
   )
 }
 
-
 # function to build RF model based on passed in health outcome
-rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2000, tune_setting = "all", dir) {
+rf_model <- function(data, start_yr, end_yr, outcome, dir) {
   
-  clean = clean %>% 
+  clean = data %>% 
     filter(YEAR >= start_yr & YEAR <= end_yr)
   
   
@@ -108,8 +83,7 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
   overlap_counties <- intersect(unique(train_df$COUNTYFIPS), unique(test_df$COUNTYFIPS))
   stopifnot(length(overlap_counties) == 0)
   
-  
-  # y train/test
+
   y_train <- train_df[[outcome]]
   y_test <- test_df[[outcome]]
   
@@ -117,7 +91,6 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
   # remove year effects for y
   year_model <- lm(y_train ~ factor(train_df$YEAR))
   
-  # Updated training outcome
   fit_y <- lm(
     outcome ~ YEAR,
     data = data.frame(
@@ -137,13 +110,16 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
       )
     )
   
- # X train/test and year effects removed
+  # remove year effects for X
   adj <- remove_year_effects(train_df, test_df, predictors)
   
   X_train_updated <- adj$train
   X_test_updated  <- adj$test
   
   message("data setup done")
+  
+  num_trees = 2000
+  tune_setting = "all"
   
   # full RF model
   rf_full <- regression_forest(
@@ -164,22 +140,32 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
   train_performance <- model_metrics(y_train_updated, train_pred)
   test_performance  <- model_metrics(y_test_updated, test_pred)
   
-  importance_df <- tibble(
-    variable = predictors,
-    importance = variable_importance(rf_full)
-  ) %>%
-    arrange(desc(importance))
+  # feature selection
+  vsurf_fit <- VSURF(
+    x = X_train_updated,
+    y = y_train_updated
+  )
   
-  top_variables <- importance_df %>%
-    slice_head(n = top_n) %>%
-    pull(variable)
+  message("feature selection done")
   
-  message("Top variables:")
-  print(top_variables)
+  summary(vsurf_fit)
   
-  # refit with important vars
-  X_train_selected <- X_train_updated[, top_variables, drop = FALSE]
-  X_test_selected  <- X_test_updated[, top_variables, drop = FALSE]
+  # vars for interpretation
+  interp_vars <- colnames(X_train_updated)[vsurf_fit$varselect.interp]
+  
+  # vars for prediction
+  pred_vars <- colnames(X_train_updated)[vsurf_fit$varselect.pred]
+  
+  # variable importance
+  imp <- data.frame(
+    variable = colnames(X_train_updated)[vsurf$imp.mean.dec.ind],
+    importance = vsurf$imp.mean.dec,
+    sd = vsurf$imp.sd.dec
+  )
+  
+  # selected model
+  X_train_selected <- X_train_updated[, pred_vars, drop = FALSE]
+  X_test_selected  <- X_test_updated[, pred_vars, drop = FALSE]
   
   rf_selected <- regression_forest(
     X = X_train_selected,
@@ -217,6 +203,10 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
     predicted_full_model = test_pred,
     predicted_selected_model = selected_test_pred
   )
+
+  #parameter vals
+  tuned_params_full <- rf_full$tunable.params
+  tuned_params_selected <- rf_selected$tunable.params
   
   # Create output folder if needed.
   path = paste0("data/output/", dir)
@@ -224,35 +214,33 @@ rf_model <- function(clean, start_yr, end_yr, outcome, top_n = 10, num_trees = 2
     dir.create(path, recursive = TRUE)
   }
   
-  #parameter vals
-  tuned_params_full <- rf_full$tunable.params
-  tuned_params_selected <- rf_selected$tunable.params
   
   save(
+    interp_vars,
+    pred_vars, 
+    imp,
+    performance_summary,
+    predictions_output,
     rf_full,
     rf_selected,
     tuned_params_full,
     tuned_params_selected,
-    performance_summary,
-    importance_df,
-    top_variables,
-    predictions_output,
-    file = file.path(path, paste0(outcome, "_grf_results.RData"))  
-    )
+    file = file.path(path, paste0(outcome, "_vsurf_results.RData"))  
+  )
   
 } 
 
 
 # run models
 ## dates from data availability dashboard
-stroke_dth <- rf_model(clean,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35", dir="all_params_tuned_plus_year_effects")
+stroke_dth <- rf_model(dat,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35", dir="vsurf_selected")
 
-self_harm_dth <- rf_model(clean,2010,2023,"CDCW_SELFHARM_DTH_RATE", dir="all_params_tuned_plus_year_effects")
+self_harm_dth <- rf_model(dat,2010,2023,"CDCW_SELFHARM_DTH_RATE", dir="vsurf_selected")
 
-injury_dth <- rf_model(clean,2010,2023,"CDCW_INJURY_DTH_RATE", dir="all_params_tuned_plus_year_effects")
+injury_dth <- rf_model(dat,2010,2023,"CDCW_INJURY_DTH_RATE", dir="vsurf_selected")
 
-obesity <- rf_model(clean,2010,2017,"CHR_PCT_ADULT_OBESITY", dir="all_params_tuned_plus_year_effects")
+obesity <- rf_model(dat,2010,2017,"CHR_PCT_ADULT_OBESITY", dir="vsurf_selected")
 
-low_birth <- rf_model(clean,2010,2014,"CHR_PCT_LOW_BIRTH_WT", dir="all_params_tuned_plus_year_effects")
+low_birth <- rf_model(dat,2010,2014,"CHR_PCT_LOW_BIRTH_WT", dir="vsurf_selected")
 
-mental <- rf_model(clean,2014,2022,"CHR_PCT_MENTAL_DISTRESS", dir="all_params_tuned_plus_year_effects")
+mental <- rf_model(dat,2014,2022,"CHR_PCT_MENTAL_DISTRESS", dir="vsurf_selected")

@@ -1,6 +1,8 @@
-# make filtered dataset for random forest models
+# make filtered dataset for random forest models, data imputation
 
 library(dplyr)
+library(purrr)
+library(randomForest)
 
 dat <- readRDS("data/analysis/clean_ALL_data.rds")
 dash = readRDS("shiny_dashboard/dashboard_data.rds")
@@ -41,7 +43,27 @@ rf_dat <- dat %>%
   filter(YEAR > 2009) %>% 
   filter(as.numeric(COUNTYFIPS) < 57000) # filter out us territories
 
+
+# imputation (replace with median)
+imputed = rf_dat %>% 
+  arrange(YEAR, COUNTYFIPS) %>% 
+  mutate(COUNTYFIPS = as.factor(COUNTYFIPS)) %>% 
+  group_split(YEAR) %>%
+  map_dfr(~ na.roughfix(.x))
+
+#some of the variables are entirely missing from a year
+vars_to_remove <- imputed %>%
+  select(-all_of(outcomes)) %>%           # ignore health outcomes
+  group_by(YEAR) %>%
+  summarise(across(where(is.numeric), ~ all(is.na(.))), .groups = "drop") %>%
+  select(-YEAR) %>%  # don't want to exclude year
+  select(where(any)) %>%
+  names()
+
+clean <- imputed %>%
+  select(-all_of(vars_to_remove))
+
 saveRDS(
-  rf_dat,
+  clean,
   "data/analysis/random_forest_dat_2010_2023.rds"
 )
