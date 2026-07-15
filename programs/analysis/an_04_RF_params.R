@@ -69,7 +69,5 @@ param_table <- function(dir) {
   write.csv(params_long, paste0(out_dir, "/model_params.csv"), row.names = F)
 }
 
-#param_table("all_params_tuned_plus_year_effects")
-#param_table("drive_time_model")
-
-param_table("years_as_dummies")
+param_table("with_demographics_year_dummies")
+param_table("without_demographics_year_dummies")

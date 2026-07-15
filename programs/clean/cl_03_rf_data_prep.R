@@ -65,7 +65,8 @@ imputed <- rf_dat %>%
     num.trees = 300,
     maxiter = 5,
     seed = 123,
-    verbose = TRUE
+    verbose = TRUE,
+    data_only = TRUE
   )
 
 

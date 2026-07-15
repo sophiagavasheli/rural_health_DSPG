@@ -9,7 +9,7 @@ dat_w_dem = readRDS("data/analysis/random_forest_dat_2010_2022.rds")
 
 # without demographics
 dat_wo_dem = dat_w_dem %>% 
-  select(-c("ACS_MEDIAN_AGE", "ACS_PCT_AIAN", "ACS_PCT_ASIAN", "ACS_PCT_BLACK", "ACS_PCT_HISPANIC", "ACS_PCT_WHITE", "ACS_MEDIAN_HH_INC", "ACS_PCT_POSTHS_ED", "SAHIE_PCT_UNINSURED64"))
+  select(-c("ACS_MEDIAN_AGE", "ACS_PCT_AIAN", "ACS_PCT_ASIAN", "ACS_PCT_BLACK", "ACS_PCT_HISPANIC", "ACS_PCT_WHITE", "ACS_PCT_POSTHS_ED", "SAHIE_PCT_UNINSURED64"))
 
 not_predictors = c("CHR_PCT_MENTAL_DISTRESS", "CHR_PCT_LOW_BIRTH_WT", "CHR_PCT_ADULT_OBESITY", "CDCW_INJURY_DTH_RATE", "CDCW_SELFHARM_DTH_RATE",  "CDCA_STROKE_DTH_RATE_ABOVE35", "COUNTYFIPS")
 
@@ -30,6 +30,9 @@ model_metrics <- function(observed, predicted) {
 rf_model <- function(data, predictors, start_yr, end_yr, outcome, top_n = 10, num_trees = 2000, tune_setting = "all", dir) {
   
   clean = data %>% 
+    mutate(YEAR = as.numeric(as.character(YEAR)),
+           COUNTYFIPS = as.numeric(as.character(COUNTYFIPS))
+           ) %>% 
     filter(YEAR >= start_yr & YEAR <= end_yr)
   
   

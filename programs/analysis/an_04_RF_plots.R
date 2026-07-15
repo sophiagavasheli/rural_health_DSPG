@@ -421,8 +421,8 @@ analyze_rf <- function(dir, health_labels){
   
 } 
 
-#results <- analyze_rf("all_params_tuned", many_yrs)
-#results <- analyze_rf("all_params_tuned_plus_year_effects", many_yrs)
+
 #results <- analyze_rf("drive_time_model", w_drv_time)
 
-results = analyze_rf("years_as_dummies", many_yrs)
+results = analyze_rf("with_demographics_year_dummies", many_yrs)
+results2 = analyze_rf("without_demographics_year_dummies", many_yrs)
