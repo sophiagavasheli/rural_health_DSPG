@@ -10,3 +10,4 @@ shiny_dashboard/clean_ALL_data.csv
 data/outcome/OSM/OSM_states_2023
 data/output
 shiny_dashboard/map_dat.rds
+*.out
