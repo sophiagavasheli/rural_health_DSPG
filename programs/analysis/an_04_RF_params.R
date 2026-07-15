@@ -70,5 +70,6 @@ param_table <- function(dir) {
 }
 
 #param_table("all_params_tuned_plus_year_effects")
+#param_table("drive_time_model")
 
-param_table("drive_time_model")
+param_table("years_as_dummies")

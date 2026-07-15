@@ -93,7 +93,7 @@ rf_model <- function(data, start_yr, end_yr, outcome, top_n = 10, num_trees = 20
   test_performance  <- model_metrics(y_test, test_pred)
   
   importance_df <- tibble(
-    variable = predictors,
+    variable = colnames(X_train),
     importance = variable_importance(rf_full)
   ) %>%
     arrange(desc(importance))
