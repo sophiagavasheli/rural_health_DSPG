@@ -22,20 +22,12 @@ available_vars <- dash %>%
     Data.Type == "num") %>%
   select(Year, Variable.Name, Variable.Label)
 
+vars = unique(available_vars$Variable.Name)
 
 map_dat <- dat %>%
+  select(YEAR, COUNTYFIPS, COUNTY, all_of(vars)) %>% 
   mutate(
     COUNTYFIPS = sprintf("%05d", as.numeric(COUNTYFIPS))
-  ) %>%
-  pivot_longer(
-    cols = all_of(unique(available_vars$Variable.Name)),
-    names_to = "Variable.Name",
-    values_to = "value"
-  ) %>%
-  left_join(
-    available_vars,
-    by = c("YEAR" = "Year",
-           "Variable.Name" = "Variable.Name")
   ) %>%
   left_join(
     counties_sf,
