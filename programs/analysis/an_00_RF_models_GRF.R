@@ -4,11 +4,17 @@ library(grf)
 library(dplyr)
 library(tibble)
 
-dat = readRDS("data/analysis/random_forest_dat_2010_2023.rds")
+# data with demographic variables
+dat_w_dem = readRDS("data/analysis/random_forest_dat_2010_2022.rds")
+
+# without demographics
+dat_wo_dem = dat_w_dem %>% 
+  select(-c("ACS_MEDIAN_AGE", "ACS_PCT_AIAN", "ACS_PCT_ASIAN", "ACS_PCT_BLACK", "ACS_PCT_HISPANIC", "ACS_PCT_WHITE", "ACS_MEDIAN_HH_INC", "ACS_PCT_POSTHS_ED", "SAHIE_PCT_UNINSURED64"))
 
 not_predictors = c("CHR_PCT_MENTAL_DISTRESS", "CHR_PCT_LOW_BIRTH_WT", "CHR_PCT_ADULT_OBESITY", "CDCW_INJURY_DTH_RATE", "CDCW_SELFHARM_DTH_RATE",  "CDCA_STROKE_DTH_RATE_ABOVE35", "COUNTYFIPS")
 
-predictors <- setdiff(names(dat), not_predictors)
+predictors_dem <- setdiff(names(dat_w_dem), not_predictors)
+predictors_wo_dem <- setdiff(names(dat_wo_dem), not_predictors)
 
 # model performance helper
 model_metrics <- function(observed, predicted) {
@@ -21,7 +27,7 @@ model_metrics <- function(observed, predicted) {
 
 
 # function to build RF model based on passed in health outcome
-rf_model <- function(data, start_yr, end_yr, outcome, top_n = 10, num_trees = 2000, tune_setting = "all", dir) {
+rf_model <- function(data, predictors, start_yr, end_yr, outcome, top_n = 10, num_trees = 2000, tune_setting = "all", dir) {
   
   clean = data %>% 
     filter(YEAR >= start_yr & YEAR <= end_yr)
@@ -174,16 +180,21 @@ rf_model <- function(data, start_yr, end_yr, outcome, top_n = 10, num_trees = 20
 # run models
 ## dates from data availability dashboard
 
-name = "years_as_dummies" #folder
+name = "with_demographics_year_dummies" #folder
 
-stroke_dth <- rf_model(dat,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35", dir = name)
+stroke_dth <- rf_model(dat_w_dem, predictors_dem,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35", dir = name)
+self_harm_dth <- rf_model(dat_w_dem, predictors_dem,2010,2022,"CDCW_SELFHARM_DTH_RATE", dir = name)
+injury_dth <- rf_model(dat_w_dem, predictors_dem,2010,2022,"CDCW_INJURY_DTH_RATE", dir = name)
+obesity <- rf_model(dat_w_dem, predictors_dem,2010,2017,"CHR_PCT_ADULT_OBESITY", dir = name)
+low_birth <- rf_model(dat_w_dem, predictors_dem,2010,2014,"CHR_PCT_LOW_BIRTH_WT", dir = name)
+mental <- rf_model(dat_w_dem, predictors_dem,2014,2022,"CHR_PCT_MENTAL_DISTRESS", dir = name)
 
-self_harm_dth <- rf_model(dat,2010,2023,"CDCW_SELFHARM_DTH_RATE", dir = name)
 
-injury_dth <- rf_model(dat,2010,2023,"CDCW_INJURY_DTH_RATE", dir = name)
+name = "without_demographics_year_dummies"
 
-obesity <- rf_model(dat,2010,2017,"CHR_PCT_ADULT_OBESITY", dir = name)
-
-low_birth <- rf_model(dat,2010,2014,"CHR_PCT_LOW_BIRTH_WT", dir = name)
-
-mental <- rf_model(dat,2014,2022,"CHR_PCT_MENTAL_DISTRESS", dir = name)
+stroke_dth <- rf_model(dat_wo_dem, predictors_wo_dem,2010,2021,"CDCA_STROKE_DTH_RATE_ABOVE35", dir = name)
+self_harm_dth <- rf_model(dat_wo_dem, predictors_wo_dem,2010,2022,"CDCW_SELFHARM_DTH_RATE", dir = name)
+injury_dth <- rf_model(dat_wo_dem, predictors_wo_dem,2010,2022,"CDCW_INJURY_DTH_RATE", dir = name)
+obesity <- rf_model(dat_wo_dem, predictors_wo_dem,2010,2017,"CHR_PCT_ADULT_OBESITY", dir = name)
+low_birth <- rf_model(dat_wo_dem, predictors_wo_dem,2010,2014,"CHR_PCT_LOW_BIRTH_WT", dir = name)
+mental <- rf_model(dat_wo_dem, predictors_wo_dem,2014,2022,"CHR_PCT_MENTAL_DISTRESS", dir = name)
