@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # script to run RF models with VSURF
+# this job can be submitted in the rural_health_DSPG repo, no data copying required
+
 #SBATCH --job-name=vsurf_grf
 #SBATCH --account=dspg_viz
 #SBATCH --partition=normal_q
@@ -22,4 +24,6 @@ export OMP_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 
-Rscript an_00b_RF_models_VSURF.R
+cd "/home/sophiag23/rural_health_DSPG"
+
+Rscript programs/analysis/an_00b_RF_models_VSURF.R

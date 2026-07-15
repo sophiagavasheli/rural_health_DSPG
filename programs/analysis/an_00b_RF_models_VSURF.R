@@ -155,6 +155,7 @@ rf_model <- function(data, start_yr, end_yr, outcome, dir) {
     y = y_train_updated,
     parallel = TRUE,
     ncores = ncores,
+    ntree.pred = 500, # default = 2000, took too long
     clusterType = "FORK"
   )
   
