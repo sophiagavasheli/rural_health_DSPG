@@ -17,7 +17,11 @@ avail_dash_dat <- readRDS("dashboard_data.rds")
 years <- 2009:2023
 
 ## health and infrastructure map
-#inf_health = readRDS("")
+health = readRDS("health_map_data.rds") %>% st_transform(4326)
+infra = readRDS("infrastructure_map_data.rds") %>% st_transform(4326)
+
+health_choices = readRDS("health_vars.rds")
+infra_choices = readRDS("infrastructure_vars.rds")
 
 ## drive time map
 drive_times = readRDS("health_site_drive_times_2023.rds")
@@ -26,10 +30,10 @@ states_sf <- states(year = 2023, class = "sf") %>% st_transform(4326)
 
 drive_time_choices <- c(
   "Acute Care Hospital" = "acute_care_hospital",
-  "Clinic & Urgent Care" = "clinic_urgent_care",
+  "Clinic/Urgent Care" = "clinic_urgent_care",
   "Dentist" = "dentist",
-  "Doctor & Medical Specialist" = "doctors_medical_specialists",
-  "Mental Health & Psychiatric Hospital" = "mental_health",
+  "Doctor/Medical Specialist" = "doctors_medical_specialists",
+  "Mental Health Facility/Psychiatric Hospital" = "mental_health",
   "Pharmacy" = "pharmacy"
 )
 
@@ -274,7 +278,7 @@ tabPanel(
   "))),
     
     h1("Data Availability Dashboard"),
-    p("Select the domain, years, level of availability for each year, and average county coverage to view variables."),
+    p("Select the domain, years, level of availability for each year, and average county coverage to view variables. Please be patient as it takes a second to load. Check out the Data Sources page to download the data and learn about the sources."),
     
     # year slider
     fluidRow(
@@ -362,9 +366,14 @@ tabPanel(
     tags$p(
       "The following sources were used to construct the dataset presented in the Data Availability Dashboard. Please see the ",
       tags$a(href = "https://github.com/sophiagavasheli/rural_health_DSPG", "GitHub", target = "_blank"),
-      " for more specific details on how the data was collected. You can download a CSV version of the data here:"
+      " for more specific details on how the data was collected. You can download a CSV version of the data and the codebook here:"
     ),
-    downloadButton("download_data", "Download Data"),
+    
+           downloadButton("download_data", "Download Data"),
+
+           downloadButton("download_codebook", "Download Codebook"),
+
+    
     hr(),
     
     # CLH
@@ -599,19 +608,57 @@ tabPanel(
 # maps -------------------------------------------------------------------
 tabPanel(
   "Maps",
-  navset_pill( 
-    nav_panel("Infrastructure and Health Outcomes", 
-              sidebarLayout(
-                sidebarPanel(
-                  
-                  p("Please note that variables change year to year based on availability.")
-                ),
-                mainPanel(
-                  leafletOutput("health_map", height = "800px") 
-                )
-                
-              )
-              ), 
+  navset_card_pill( 
+    nav_panel(
+      "Infrastructure and Health Outcomes",
+      
+      br(),
+      
+      p("Please be patient, the maps take a second to load. Note that variables change year to year based on availability. Due to the change from counties to planning regions in Connecticut in 2022, this state may be missing data."),
+      
+      div(
+        style = "background-color: white; border: 1px solid #d8e2dc; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 16px;",
+        
+        layout_column_wrap(
+          width = "250px", # Allows wrapping on smaller screens, fits 3 side-by-side on desktop
+          
+          selectInput(
+            "year",
+            "Select a year:",
+            choices = sort(unique(health$YEAR)),
+            selected = 2023,
+            width = "100%"
+          ),
+          
+          selectInput(
+            "infra_var",
+            "Select an infrastructure variable:",
+            choices = NULL,
+            width = "100%"
+          ),
+          
+          selectInput(
+            "health_var",
+            "Select a health outcome:",
+            choices = NULL,
+            width = "100%"
+          )
+        )
+      ),
+      
+      br(),
+      
+      fluidRow(
+        column(
+          6,
+          leafletOutput("infra_map")
+        ),
+        column(
+          6,
+          leafletOutput("health_map")
+        )
+      )
+    ), 
     nav_panel("Drive Times", 
               sidebarLayout(
                 sidebarPanel(
@@ -689,7 +736,7 @@ tabPanel(
         p(
           tags$a(
             "Pragati Dahal",
-            href = "https://www.linkedin.com/in/pragatidahal9843/",   
+            href = "https://pdahal23.github.io/",   
             target = "_blank"
           )
         ),
@@ -751,7 +798,129 @@ server <- function(input, output, session) {
 
 # maps ---------------------------------------------------------------------
   
-  ## health infrastructure map
+  ## health and infrastructure maps
+  
+  # update infra/health outcome choices based on selected year
+  observeEvent(input$year, {
+    
+    infra_vars <- infra_choices %>%
+      filter(Year == input$year) %>%
+      distinct(Variable.Name, Variable.Label)
+    
+    health_vars <- health_choices %>%
+      filter(Year == input$year) %>%
+      distinct(Variable.Name, Variable.Label)
+    
+    updateSelectInput(
+      session,
+      "infra_var",
+      choices = infra_vars %>%
+        arrange(Variable.Label) %>%
+        with(setNames(Variable.Name, Variable.Label))   
+      )
+    
+    updateSelectInput(
+      session,
+      "health_var",
+      choices = health_vars %>%
+        arrange(Variable.Label) %>%
+        with(setNames(Variable.Name, Variable.Label))
+    )
+    
+  })
+  
+  # reactive data filtering
+  health_filt <- reactive({
+    
+    req(input$year, input$health_var)
+    
+    dat <- health %>%
+      filter(YEAR == input$year)
+    
+    dat$value <- dat[[input$health_var]]
+    
+    dat
+    
+  })
+  
+  infra_filt <- reactive({
+    
+    req(input$year, input$infra_var)
+    
+    dat <- infra %>%
+      filter(YEAR == input$year)
+    
+    dat$value <- dat[[input$infra_var]]
+    
+    dat
+    
+  })
+  
+  output$health_map <- renderLeaflet({
+    
+    dat <- health_filt()
+    
+    pal <- colorNumeric(
+      palette = rev(RColorBrewer::brewer.pal(11, "RdYlGn")),
+      domain = dat$value,
+      na.color = "gray90"
+    )
+    
+    leaflet(dat) %>%
+      addProviderTiles(providers$CartoDB.Positron) %>%
+      fitBounds(lng1 = -125, lat1 = 24,lng2 = -66, lat2 = 50) %>% 
+      
+      addPolygons(
+        fillColor = ~pal(value),
+        fillOpacity = 0.7,
+        color = "white",
+        weight = 0.5,
+        label = ~paste0(
+          COUNTY,
+          ": ",
+          round(value, 2)
+        )
+      ) %>%
+      addLegend(
+        position = "bottomright",
+        pal = pal,
+        values = dat$value,
+        title = "Value:")
+    
+  })
+  
+  output$infra_map <- renderLeaflet({
+    
+    dat <- infra_filt()
+    
+    pal <- colorNumeric(
+      palette = "RdYlGn",
+      domain = dat$value,
+      na.color = "gray90"
+    )
+    
+    leaflet(dat) %>%
+      addProviderTiles(providers$CartoDB.Positron) %>%
+      fitBounds(lng1 = -125, lat1 = 24,lng2 = -66, lat2 = 50) %>% 
+      
+      addPolygons(
+        fillColor = ~pal(value),
+        fillOpacity = 0.7,
+        color = "white",
+        weight = 0.5,
+        label = ~paste0(
+          COUNTY,
+          ": ",
+          round(value, 2)
+        )
+      ) %>%
+      addLegend(
+        position = "bottomright",
+        pal = pal,
+        values = dat$value,
+        title = "Value:")
+    
+  })
   
   
   ## drive time map 
@@ -1123,6 +1292,15 @@ server <- function(input, output, session) {
       file.copy("clean_ALL_data.csv", file)
     }
   )  
+  
+  output$download_codebook <- downloadHandler(
+    filename = function() {
+      "all_codebook.csv"
+    },
+    content = function(file) {
+      file.copy("all_codebook.csv", file)
+    }
+  )
   
   
 } #end server
