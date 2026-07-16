@@ -1,14 +1,13 @@
+# code to generate images for shiny to explain drive time calculations
+
 library(sf)
 library(dplyr)
 library(ggplot2)
 library(leaflet)
 
-# Example state
 state <- "VA"
 
-spatial_data = readRDS("data/outcome/OSM/drive_times/va_acute_hosp_drive_times.rds") %>% st_transform(4326)
-
-state_counties <- readRDS("data/outcome/census/us_counties_2023.rds") %>%
+state_counties <- readRDS("data/outcome/census/us_counties_2020.rds") %>%
   filter(STUSPS == state) %>% 
   st_transform(4326)
 
@@ -22,9 +21,49 @@ state_hosps <- readRDS("data/outcome/UNC_shep/clean_UNC_hosps_acute_2023.rds") %
   filter(STUSPS == state) %>% 
   st_transform(4326)
 
+# hosps and centroids -----------------------------------------------------
+leaflet() %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  setView(lng = -80, lat = 37, zoom = 6) %>%
+  
+  addPolygons(
+    data = state_counties,
+    color = "darkgray",
+    weight = 1,
+    fillColor = "#d8e2dc",
+    opacity = 0.8,
+    group = "County Boundaries",
+    popup = ~NAME
+  ) %>% 
+  
+  
+  # All hospitals
+  addCircleMarkers(
+    data = state_hosps,
+    radius = 3,
+    color = "darkgreen",
+    stroke = FALSE,
+    fillOpacity = 0.6,
+    popup = ~name
+  ) %>%
+  
+  
+  # County centroid
+  addCircleMarkers(
+    data = state_centers,
+    radius = 1,
+    color = "steelblue",
+    fillColor = "steelblue",
+    stroke = FALSE,
+    fillOpacity = 1,
+  )
+
+
+# 1 centroid and 10 nearest hospitals -------------------------------------
+
 # Pick one county
 center <- state_centers %>%
-  filter(COUNTYFP == "003") %>%
+  filter(COUNTYFP == "121") %>%
   slice(1)
 
 # Compute distances
@@ -43,13 +82,13 @@ buffer <- st_buffer(center, radius)
 
 leaflet() %>%
   addProviderTiles("CartoDB.Positron") %>%
-  
+  setView(lng = -80, lat = 37, zoom = 6) %>%
   
   addPolygons(
     data = state_counties,
     color = "darkgray",
     weight = 1,
-    fill = "beige",
+    fillColor = "#d8e2dc",
     opacity = 0.8,
     group = "County Boundaries",
     popup = ~NAME
@@ -96,100 +135,54 @@ leaflet() %>%
     
   ) 
 
+# centroids linked to nearest ---------------------------------------------
+
+county_centers <- state_centers %>%
+  filter(COUNTYFP == "121")
+
+# For each centroid, find nearest hospital
+nearest_idx <- st_nearest_feature(county_centers, state_hosps)
+
+nearest_hosps <- state_hosps[nearest_idx, ]
+
+lines_sf <- st_sf(
+  geometry = st_nearest_points(
+    county_centers,
+    state_hosps[nearest_idx, ],
+    pairwise = TRUE
+  )
+)
+
 leaflet() %>%
   addProviderTiles("CartoDB.Positron") %>%
-  
   
   addPolygons(
     data = state_counties,
     color = "darkgray",
     weight = 1,
-    fill = "beige",
-    opacity = 0.8,
-    group = "County Boundaries",
-    popup = ~NAME
-  ) %>% 
-  
-  
-  # All hospitals
-  addCircleMarkers(
-    data = state_hosps,
-    radius = 3,
-    color = "darkgreen",
-    stroke = FALSE,
-    fillOpacity = 0.6,
-    popup = ~name
+    fillColor = "#d8e2dc",
+    fillOpacity = 0.5
   ) %>%
   
-  
-  # County centroid
-  addCircleMarkers(
-    data = state_centers,
-    radius = 1,
+  addPolylines(
+    data = lines_sf,
     color = "steelblue",
-    fillColor = "steelblue",
+    weight = 2,
+    opacity = 0.7
+  ) %>%
+  
+  addCircleMarkers(
+    data = county_centers,
+    radius = 3,
+    color = "steelblue",
+    stroke = FALSE,
+    fillOpacity = 1
+  ) %>%
+  
+  addCircleMarkers(
+    data = nearest_hosps,
+    radius = 4,
+    color = "darkred",
     stroke = FALSE,
     fillOpacity = 1,
-    popup = paste0("County: ", center$COUNTYFP)
   )
-
-
-
-# 2. DEFINE PALETTE
-pal <- colorNumeric(
-  palette = "YlOrRd",
-  domain = spatial_data$avg_drive_time_minutes,
-  na.color = "#808080"
-)
-
-# 3. LABELS FOR COUNTIES
-county_labels <- sprintf(
-  "<strong>County:</strong> %s<br/>
-   <strong>Avg Drive Time:</strong> %0.1f mins",
-  spatial_data$NAME, spatial_data$avg_drive_time_minutes
-) %>% lapply(htmltools::HTML)
-
-# 4. BUILD THE MAP WITH OVERLAY
-map <- leaflet() %>%
-  addProviderTiles(providers$CartoDB.Positron) %>% 
-  
-  # Base Layer: Counties
-  addPolygons(
-    data = spatial_data,
-    fillColor = ~pal(avg_drive_time_minutes),
-    weight = 1,
-    opacity = 1,
-    color = "white",
-    dashArray = "3",
-    fillOpacity = 0.6,
-    highlightOptions = highlightOptions(weight = 2, color = "#666", fillOpacity = 0.8, bringToFront = FALSE),
-    label = county_labels,
-    group = "Counties"
-  ) %>%
-  
-  # # Overlay Layer: Population Centroids
-  # addCircleMarkers(
-  #   data = state_centers,
-  #   radius = 1,
-  #   color = "black",
-  #   stroke = FALSE,
-  #   fillOpacity = 0.5,
-  #   label = ~paste("Tract:", TRACTCE, "<br>Pop:", POPULATION) %>% lapply(htmltools::HTML),
-  #   group = "Pop Centroids"
-  # ) %>%
-  # 
-  # # Layer Control to toggle points on/off
-  # addLayersControl(
-  #   overlayGroups = c("Counties", "Pop Centroids"),
-  #   options = layersControlOptions(collapsed = FALSE)
-  # ) %>%
-  
-  addLegend(
-    data = spatial_data,
-    pal = pal,
-    values = ~avg_drive_time_minutes,
-    title = "Avg Drive Time (Mins)",
-    position = "bottomright"
-  )
-
-map

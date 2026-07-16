@@ -309,3 +309,187 @@ hr {
   margin-top: 10px;
 }
 
+/* ==========================================
+   NAVSET CARD PILLS
+========================================== */
+
+/* Normal tab */
+.nav-pills > li > a {
+  color: #2d6a4f;
+  background: white;
+  border: 1px solid #d8e2dc;
+  border-radius: 999px;
+  margin-right: 6px;
+}
+
+/* Hover */
+.nav-pills > li > a:hover,
+.nav-pills > li > a:focus {
+  background: #d8f3dc;
+  color: #1b4332;
+  border-color: #40916c;
+}
+
+/* Active tab */
+.nav-pills > li.active > a,
+.nav-pills > li.active > a:hover,
+.nav-pills > li.active > a:focus {
+  background: #2d6a4f !important;
+  color: white !important;
+  border-color: #2d6a4f !important;
+}
+
+.card-header .navset-pill {
+  margin-bottom: 0;
+}
+
+.card-header {
+  background-color: #f2f7f3;
+  border-bottom: 1px solid #d8e2dc;
+}
+
+/* ==========================================
+   SELECTINPUT
+========================================== */
+
+/* Hover */
+.form-select:hover,
+.form-control:hover {
+  border-color: #2d6a4f;
+}
+
+/* Focus */
+.form-select:focus,
+.form-control:focus {
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 0.2rem rgba(45,106,79,0.25);
+}
+
+/* Selectize (used by default in Shiny) */
+.selectize-input {
+  border-radius: 6px;
+  border: 1px solid #b7c9bd;
+}
+
+.selectize-input:hover {
+  border-color: #2d6a4f;
+}
+
+.selectize-input.focus {
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 0.2rem rgba(45,106,79,0.25);
+}
+
+.selectize-dropdown .active {
+  background: #d8f3dc;
+  color: #1b4332;
+}
+
+.card-header {
+  background-color: #f2f7f3;
+  border-bottom: 1px solid #d8e2dc;
+}
+
+
+/* The selected item "badges" */
+.selectize-control.multi .selectize-input > div {
+  background-color: #2d6a4f !important;
+  background-image: none !important; /* Crucial: removes the default blue gradient */
+  border-color: #1b4332 !important;
+  color: white !important;
+}
+
+/* When you click directly on a selected item badge */
+.selectize-control.multi .selectize-input > div.active {
+  background-color: #1b4332 !important;
+  background-image: none !important;
+}
+
+
+/* The highlighted item in the dropdown list */
+.selectize-dropdown .option.active,
+.selectize-dropdown .option:hover {
+  background-color: #d8f3dc !important;
+  color: #1b4332 !important;
+}
+
+/* 1. The item that is ALREADY SELECTED in the dropdown */
+.selectize-dropdown .selected,
+.selectize-dropdown .option.selected {
+  background-color: #2d6a4f !important;
+  background-image: none !important; /* Removes Bootstrap's blue gradient */
+  color: white !important;
+}
+
+/* 2. The item you are CURRENTLY HOVERING over in the dropdown */
+.selectize-dropdown .active,
+.selectize-dropdown .option.active,
+.selectize-dropdown .option:hover {
+  background-color: #d8f3dc !important;
+  background-image: none !important;
+  color: #1b4332 !important;
+}
+
+/* ==========================================
+   CHECKBOXES
+========================================== */
+
+/* Bootstrap 5 checkboxes */
+.form-check-input:checked {
+  background-color: #2d6a4f;
+  border-color: #2d6a4f;
+}
+
+.form-check-input:focus {
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 0.2rem rgba(45,106,79,0.25);
+}
+
+.form-check-input:hover {
+  border-color: #2d6a4f;
+}
+
+/* Fallback for older Shiny/Bootstrap */
+input[type="checkbox"] {
+  accent-color: #2d6a4f;
+}
+
+/* ==========================================
+   NAVBAR DROPDOWN MENU
+========================================== */
+
+/* Dropdown menu */
+.navbar .dropdown-menu {
+  background-color: white;
+  border: 1px solid #d8e2dc;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  padding: 6px 0;
+}
+
+/* Menu items */
+.navbar .dropdown-menu > li > a {
+  color: #2d6a4f;
+  padding: 10px 18px;
+  transition: background-color 0.2s ease;
+}
+
+/* Hover/focus */
+.navbar .dropdown-menu > li > a:hover,
+.navbar .dropdown-menu > li > a:focus {
+  background-color: #d8f3dc;
+  color: #1b4332;
+}
+
+/* Active item */
+.navbar .dropdown-menu > .active > a,
+.navbar .dropdown-menu > .active > a:hover,
+.navbar .dropdown-menu > .active > a:focus {
+  background-color: #2d6a4f;
+  color: white;
+}
+
+/* Divider */
+.navbar .dropdown-menu .divider {
+  background-color: #d8e2dc;
+}

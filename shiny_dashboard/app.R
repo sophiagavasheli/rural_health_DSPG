@@ -345,7 +345,7 @@ tabPanel(
     fluidRow(
       column(9,
           p(strong("Domain:")),
-          uiOutput("domainButtons"),
+          uiOutput("domainButtons")
       ),
       column(3,
           textInput("varSearch", "Search Variables/Topics:", 
@@ -684,11 +684,13 @@ tabPanel(
                 sidebarPanel(
 
                   # filter bar
-                  selectInput(
+                  selectizeInput(
                     "type_filter",
                     "Health site type:",
-                    choices = c("All", sort(unique(health_sites$health_site_label))),
-                    selected = "All"
+                    choices = c("All", 
+                                sort(unique(health_sites$health_site_label))),
+                    selected = "All",
+                    multiple = TRUE
                   ),
                   
                   p("Hospitals are sourced from the UNC Shep's Center and the other health sites are sourced from OSM. Please be aware that OSM sites are user generated and many sites might be missing on this map.")
@@ -699,17 +701,89 @@ tabPanel(
                 )
                 
               )
-              ), 
+              ) 
     
   ), 
   id = "tab" 
 ), 
 
 # analysis ----------------------------------------------------------------
-  tabPanel(
-    "Analysis",
-    fluidPage(
-      h1("Analysis")
+  navbarMenu("Analysis",
+    tabPanel("Random Forest Models",
+        p("hello")     
+             
+    
+             
+             
+             
+    ),
+    tabPanel("Drive Times",
+      h1("Calculating the Drive Time to the Nearest Health Site"),
+      p("Let's do an example of how the average drive time to the nearest acute hospital is calculated for Montgomery County, VA."),
+      # legend
+      tags$div(
+        class = "well",
+        style = "padding: 10px; max-width: 350px;",
+        
+        tags$h5(strong("Legend:")),
+        
+        tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
+                 tags$span(style = "background-color: #619E62; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
+                 "Acute hospitals"
+        ),
+        tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
+                 tags$span(style = "background-color: #4682B4; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
+                 "Tract-level population weighted centroids"
+        ),
+        tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
+                 tags$span(style = "background-color: #8B0000; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
+                 "Nearest hospitals"
+        )
+      ),
+      
+      fluidRow(
+        column(8,
+               tags$img(
+                 src = "drive_step1.png",
+                 style = "width:100%; height:auto;"
+               )
+               ),
+        column(4,
+               p("Every county is divided into smaller census tracts. A centroid of a census tract is the geographic center of the tract while a population weighted centroid is the center of the tract based on where people live, so the centroids will be pulled to population dense areas."),
+               
+              
+               )
+            ), 
+      
+      hr(), 
+      fluidRow(
+        column(8,
+               tags$img(
+                 src = "drive_step2.png",
+                 style = "width:100%; height:auto;"
+               )
+        ),
+        column(4,
+               p("Let's pick one centroid in Montgomery County and find the ten geographically closest hospitals. Among these ten hospitals, we can use the road network to estimate the drive time from the centroid to these ten hospitals. The nearest one will be the one with the lowest drive time.")
+        )
+        
+      ),
+      
+      hr(),
+      
+      fluidRow(
+        column(8,
+               tags$img(
+                 src = "drive_step3.png",
+                 style = "width:100%; height:auto;"
+               )
+        ),
+        column(4,
+               p("We do this for every centroid in the county and find its nearest hospital. Then we average all these drive times across the county to get a final average value, which you can see in the Drive Time Map!")
+        )
+        
+      )
+      
     )
   ), 
   
@@ -772,7 +846,7 @@ tabPanel(
           style = "text-align:center;",
           img(src = "interns.jpg", 
               height = "390px", 
-              width = "700px"), 
+              width = "700px") 
         ),
         h4("2026 DSPG Cohort")
     ),
@@ -801,59 +875,66 @@ server <- function(input, output, session) {
   ## health and infrastructure maps
   
   # update infra/health outcome choices based on selected year
-  observeEvent(input$year, {
-    
-    infra_vars <- infra_choices %>%
+  health_var_choices <- reactive({
+    req(input$year)
+    health_choices %>%
       filter(Year == input$year) %>%
-      distinct(Variable.Name, Variable.Label)
-    
-    health_vars <- health_choices %>%
-      filter(Year == input$year) %>%
-      distinct(Variable.Name, Variable.Label)
-    
-    updateSelectInput(
-      session,
-      "infra_var",
-      choices = infra_vars %>%
-        arrange(Variable.Label) %>%
-        with(setNames(Variable.Name, Variable.Label))   
-      )
-    
-    updateSelectInput(
-      session,
-      "health_var",
-      choices = health_vars %>%
-        arrange(Variable.Label) %>%
-        with(setNames(Variable.Name, Variable.Label))
-    )
-    
+      distinct(Variable.Name, Variable.Label) %>%
+      arrange(Variable.Label)
   })
   
-  # reactive data filtering
-  health_filt <- reactive({
+  infra_var_choices <- reactive({
+    req(input$year)
+    infra_choices %>%
+      filter(Year == input$year) %>%
+      distinct(Variable.Name, Variable.Label) %>%
+      arrange(Variable.Label)
+  })
+  
+  observeEvent(input$year, {
+    updateSelectInput(session, "infra_var",
+                      choices = infra_var_choices() %>% 
+                        with(setNames(Variable.Name, Variable.Label)))
     
+    updateSelectInput(session, "health_var",
+                      choices = health_var_choices() %>% 
+                        with(setNames(Variable.Name, Variable.Label)))
+  })
+  
+  health_filt <- reactive({
     req(input$year, input$health_var)
     
-    dat <- health %>%
-      filter(YEAR == input$year)
+    validate(
+      need(input$health_var %in% health_var_choices()$Variable.Name,
+           "Updating variables for this year...")
+    )
     
+    dat <- health %>% filter(YEAR == input$year)
     dat$value <- dat[[input$health_var]]
     
-    dat
+    validate(
+      need(any(!is.na(dat$value)), "No data available for this variable in this year.")
+    )
     
+    dat
   })
   
   infra_filt <- reactive({
-    
     req(input$year, input$infra_var)
     
-    dat <- infra %>%
-      filter(YEAR == input$year)
+    validate(
+      need(input$infra_var %in% infra_var_choices()$Variable.Name,
+           "Updating variables for this year...")
+    )
     
+    dat <- infra %>% filter(YEAR == input$year)
     dat$value <- dat[[input$infra_var]]
     
-    dat
+    validate(
+      need(any(!is.na(dat$value)), "No data available for this variable in this year.")
+    )
     
+    dat
   })
   
   output$health_map <- renderLeaflet({
@@ -876,11 +957,20 @@ server <- function(input, output, session) {
         color = "white",
         weight = 0.5,
         label = ~paste0(
-          COUNTY,
-          ": ",
+          "<b>County:</b> ", COUNTY, "<br>",
+          "Value: ",
           round(value, 2)
         )
       ) %>%
+      
+      addPolygons(
+        data = states_sf,
+        fill = FALSE,
+        color = "darkgray",
+        weight = 1,
+        opacity = 0.6
+      ) %>%
+      
       addLegend(
         position = "bottomright",
         pal = pal,
@@ -909,11 +999,20 @@ server <- function(input, output, session) {
         color = "white",
         weight = 0.5,
         label = ~paste0(
-          COUNTY,
-          ": ",
+          "<b>County:</b> ", COUNTY, "<br>",
+          "Value: ",
           round(value, 2)
         )
       ) %>%
+      
+      addPolygons(
+        data = states_sf,
+        fill = FALSE,
+        color = "darkgray",
+        weight = 1,
+        opacity = 0.6
+      ) %>%
+      
       addLegend(
         position = "bottomright",
         pal = pal,
@@ -959,7 +1058,7 @@ server <- function(input, output, session) {
       addPolygons(
         data = states_sf,
         fill = FALSE,
-        color = "lightgray",
+        color = "darkgray",
         weight = 1,
         opacity = 0.6
       ) %>%
@@ -979,11 +1078,13 @@ server <- function(input, output, session) {
     health_sites$health_site_label
   )
   
+  
   filtered_data <- reactive({
-    if (input$type_filter == "All") {
+    if ("All" %in% input$type_filter || length(input$type_filter) == 0) {
       health_sites
     } else {
-      dplyr::filter(health_sites, health_site_label == input$type_filter)
+      health_sites %>%
+        filter(health_site_label %in% input$type_filter)
     }
   })
   
@@ -1004,8 +1105,18 @@ server <- function(input, output, session) {
         popup = ~paste0(
           "<b>", health_site_name, "</b><br>",
           "Type: ", health_site_label, "<br>",
-          "County: ", county
+          "County: ", county, "<br>",
+          "Address: ", address, "<br>",
+          "Hospital Beds: ", hospital_beds
         )
+      ) %>%
+      
+      addPolygons(
+        data = states_sf,
+        fill = FALSE,
+        color = "darkgray",
+        weight = 1,
+        opacity = 0.6
       ) %>%
       
       addLegend(
