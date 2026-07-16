@@ -1,9 +1,18 @@
-# random forest model with 2023 data, including drive times
+# RF model for 2023 data with VSURF
 
 library(grf)
 library(dplyr)
 library(tibble)
 library(purrr)
+library(randomForest)
+library(VSURF)
+
+# get num cores
+ncores <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK"))
+
+if (is.na(ncores) || ncores < 1) {
+  ncores <- parallel::detectCores(logical = FALSE)
+}
 
 dat = readRDS("data/analysis/rf_drive_time_dat_2023.rds")
 
@@ -41,7 +50,7 @@ model_metrics <- function(observed, predicted) {
 
 
 # function to build RF model based on passed in health outcome
-rf_model <- function(clean, outcome, top_n = 10, num_trees = 2000, tune_setting = "all", dir) {
+rf_model <- function(clean, outcome, num_trees = 2000, tune_setting = "all", dir) {
   
   # County-level 70/30 train/test split
   train_share <- 0.70
@@ -102,22 +111,36 @@ rf_model <- function(clean, outcome, top_n = 10, num_trees = 2000, tune_setting 
   train_performance <- model_metrics(y_train, train_pred)
   test_performance  <- model_metrics(y_test, test_pred)
   
-  importance_df <- tibble(
-    variable = predictors,
-    importance = variable_importance(rf_full)
-  ) %>%
-    arrange(desc(importance))
+  # feature selection
+  vsurf_fit <- VSURF(
+    x = X_train,
+    y = y_train,
+    parallel = TRUE,
+    ncores = ncores,
+    ntree.pred = 500, # default = 2000, took too long
+    clusterType = "FORK"
+  )
   
-  top_variables <- importance_df %>%
-    slice_head(n = top_n) %>%
-    pull(variable)
+  message("feature selection done")
   
-  message("Top variables:")
-  print(top_variables)
+  summary(vsurf_fit)
   
-  # refit with important vars
-  X_train_selected <- X_train[, top_variables, drop = FALSE]
-  X_test_selected  <- X_test[, top_variables, drop = FALSE]
+  # vars for interpretation
+  interp_vars <- colnames(X_train)[vsurf_fit$varselect.interp]
+  
+  # vars for prediction
+  pred_vars <- colnames(X_train)[vsurf_fit$varselect.pred]
+  
+  # variable importance
+  imp <- data.frame(
+    variable = colnames(X_train)[vsurf_fit$imp.mean.dec.ind],
+    importance = vsurf_fit$imp.mean.dec,
+    sd = vsurf_fit$imp.sd.dec
+  )
+  
+  # selected model
+  X_train_selected <- X_train[, pred_vars, drop = FALSE]
+  X_test_selected  <- X_test[, pred_vars, drop = FALSE]
   
   rf_selected <- regression_forest(
     X = X_train_selected,
@@ -172,18 +195,19 @@ rf_model <- function(clean, outcome, top_n = 10, num_trees = 2000, tune_setting 
     tuned_params_full,
     tuned_params_selected,
     performance_summary,
-    importance_df,
-    top_variables,
+    imp,
+    interp_vars,
+    pred_vars,
     predictions_output,
-    file = file.path(path, paste0(outcome, "_grf_results.RData"))  
+    file = file.path(path, paste0(outcome, "_vsurf_results.RData"))  
   )
   
 } 
 
 
 # run models
-drug = rf_model(imputed, "CDCW_DRUG_DTH_RATE", dir = "drive_time_model")
-birth = rf_model(imputed, "CHR_PCT_LOW_BIRTH_WT", dir = "drive_time_model")
-injury = rf_model(imputed, "CDCW_INJURY_DTH_RATE", dir = "drive_time_model")
-self_harm = rf_model(imputed, "CDCW_SELFHARM_DTH_RATE", dir = "drive_time_model")
-mort = rf_model(imputed, "CDCW_crude_death_rate", dir = "drive_time_model")
+drug = rf_model(imputed, "CDCW_DRUG_DTH_RATE", dir = "drive_vsurf")
+birth = rf_model(imputed, "CHR_PCT_LOW_BIRTH_WT", dir = "drive_vsurf")
+injury = rf_model(imputed, "CDCW_INJURY_DTH_RATE", dir = "drive_vsurf")
+self_harm = rf_model(imputed, "CDCW_SELFHARM_DTH_RATE", dir = "drive_vsurf")
+mort = rf_model(imputed, "CDCW_crude_death_rate", dir = "drive_vsurf")
