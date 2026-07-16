@@ -2,6 +2,8 @@
 
 library(dplyr)
 library(tidyr)
+library(stringr)
+library(missRanger)
 
 drv = readRDS("data/analysis/health_site_drive_times_2023.rds")
 dat = readRDS("data/analysis/clean_ALL_data.rds")
@@ -37,18 +39,22 @@ remove_counties = drv_clean %>%
  
 
 # data from final dataset
-predictor_topics = c(#"People", "Income", "Attainment", "Health insurance status",
-  "Characteristics of health care providers", "Characteristics of health care facilities", "Transportation")
+predictor_topics = c("Characteristics of health care providers", "Characteristics of health care facilities", "Transportation")
 
 additional_vars <- c(
   "USDA_rural_indicator_2013",
-  "FCC_res_connections_10_mbps"
+  "FCC_res_connections_10_mbps",
+  "ACS_MEDIAN_AGE", "ACS_PCT_AIAN", "ACS_PCT_ASIAN", "ACS_PCT_BLACK", 
+  "ACS_PCT_HISPANIC", "ACS_PCT_WHITE", "ACS_PCT_POSTHS_ED", "ACS_PCT_UNINSURED"
+  
 )
 
 rf_predictors <- dash %>% 
   filter(Topic %in% predictor_topics | Variable.Name %in% additional_vars) %>%
   filter(Year == 2023) %>% 
   filter(Yearly.County.Coverage.Level == "Mostly Full Coverage") %>%
+  filter(str_detect(Variable.Name, "RATE") | str_detect(Variable.Name, "PCT") |
+           Variable.Name %in% additional_vars) %>% 
   pull(Variable.Name) %>%
   unique()
 
@@ -56,19 +62,27 @@ rf_predictors <- dash %>%
 rf_vars <- unique(c(outcomes, additional_vars, rf_predictors))
 
 rf_dat <- dat %>% 
-  select(YEAR, COUNTYFIPS, all_of(rf_vars)) %>%
-  select(YEAR, COUNTYFIPS, USDA_rural_indicator_2013,
-         FCC_res_connections_10_mbps, contains("RATE"), contains("PCT")) %>% 
+  select(YEAR, COUNTYFIPS, all_of(rf_vars)) %>% 
   filter(YEAR == 2023) %>% 
-  left_join(
-    drv_clean,
-    by = c("COUNTYFIPS" = "GEOID")
-  ) %>% 
+  filter(as.numeric(COUNTYFIPS) < 57000) %>% # filter out us territories
   filter(!COUNTYFIPS %in% remove_counties) %>% 
-  filter(as.numeric(COUNTYFIPS) < 57000) # filter out us territories
+  select(-YEAR)
+
+# imputation
+imputed <- rf_dat %>%
+  arrange(COUNTYFIPS) %>%
+  mutate(COUNTYFIPS = factor(COUNTYFIPS)) %>%
+  missRanger(
+    pmm.k = 5,
+    num.trees = 300,
+    maxiter = 5,
+    seed = 123,
+    verbose = TRUE,
+    data_only = TRUE
+  ) 
   
 
 saveRDS(
-  rf_dat,
+  imputed,
   "data/analysis/rf_drive_time_dat_2023.rds"
 )

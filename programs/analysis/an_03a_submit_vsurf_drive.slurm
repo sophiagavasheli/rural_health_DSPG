@@ -26,4 +26,4 @@ export MKL_NUM_THREADS=1
 
 cd "/home/sophiag23/rural_health_DSPG"
 
-Rscript programs/analysis/an_03b_RF_drive_VSURF.R
+Rscript programs/analysis/an_03b_drive_VSURF.R

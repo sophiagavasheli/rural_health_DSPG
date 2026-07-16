@@ -4,7 +4,6 @@ library(grf)
 library(dplyr)
 library(tibble)
 library(purrr)
-library(randomForest)
 library(VSURF)
 
 # get num cores
@@ -14,7 +13,11 @@ if (is.na(ncores) || ncores < 1) {
   ncores <- parallel::detectCores(logical = FALSE)
 }
 
-dat = readRDS("data/analysis/rf_drive_time_dat_2023.rds")
+dat_w_dem = readRDS("data/analysis/rf_drive_time_dat_2023.rds")
+
+dat_wo_dem = dat_w_dem %>% 
+  select(-c("ACS_MEDIAN_AGE", "ACS_PCT_AIAN", "ACS_PCT_ASIAN", "ACS_PCT_BLACK", 
+            "ACS_PCT_HISPANIC", "ACS_PCT_WHITE", "ACS_PCT_POSTHS_ED", "ACS_PCT_UNINSURED"))
 
 # health outcomes
 outcomes <- c(
@@ -25,18 +28,13 @@ outcomes <- c(
   "CDCW_crude_death_rate"
 )
 
-# imputation (replace with median)
-imputed = dat %>% 
-  arrange(COUNTYFIPS) %>% 
-  mutate(COUNTYFIPS = as.factor(COUNTYFIPS)) %>% 
-  na.roughfix()
-
 
 not_predictors = c("CDCW_DRUG_DTH_RATE", "CHR_PCT_LOW_BIRTH_WT",
                    "CDCW_INJURY_DTH_RATE","CDCW_SELFHARM_DTH_RATE",
-                   "CDCW_crude_death_rate", "COUNTYFIPS", "YEAR")
+                   "CDCW_crude_death_rate", "COUNTYFIPS")
 
-predictors <- setdiff(names(imputed), not_predictors)
+predictors_dem <- setdiff(names(dat_w_dem), not_predictors)
+predictors_wo_dem <- setdiff(names(dat_wo_dem), not_predictors)
 
 
 # model performance helper
@@ -50,7 +48,7 @@ model_metrics <- function(observed, predicted) {
 
 
 # function to build RF model based on passed in health outcome
-rf_model <- function(clean, outcome, num_trees = 2000, tune_setting = "all", dir) {
+rf_model <- function(clean, predictors, outcome, num_trees = 2000, tune_setting = "all", dir) {
   
   # County-level 70/30 train/test split
   train_share <- 0.70
@@ -172,7 +170,6 @@ rf_model <- function(clean, outcome, num_trees = 2000, tune_setting = "all", dir
     mutate(health_outcome = outcome)
   
   predictions_output <- tibble(
-    YEAR = test_df$YEAR,
     COUNTYFIPS = test_df$COUNTYFIPS,
     observed = y_test,
     predicted_full_model = test_pred,
@@ -206,8 +203,19 @@ rf_model <- function(clean, outcome, num_trees = 2000, tune_setting = "all", dir
 
 
 # run models
-drug = rf_model(imputed, "CDCW_DRUG_DTH_RATE", dir = "drive_vsurf")
-birth = rf_model(imputed, "CHR_PCT_LOW_BIRTH_WT", dir = "drive_vsurf")
-injury = rf_model(imputed, "CDCW_INJURY_DTH_RATE", dir = "drive_vsurf")
-self_harm = rf_model(imputed, "CDCW_SELFHARM_DTH_RATE", dir = "drive_vsurf")
-mort = rf_model(imputed, "CDCW_crude_death_rate", dir = "drive_vsurf")
+name = "drive_vsurf_w_dem"
+drug = rf_model(dat_w_dem, predictors_dem, "CDCW_DRUG_DTH_RATE", dir = name)
+birth = rf_model(dat_w_dem, predictors_dem, "CHR_PCT_LOW_BIRTH_WT", dir = name)
+injury = rf_model(dat_w_dem, predictors_dem, "CDCW_INJURY_DTH_RATE", dir = name)
+self_harm = rf_model(dat_w_dem, predictors_dem, "CDCW_SELFHARM_DTH_RATE", dir = name)
+mort = rf_model(dat_w_dem, predictors_dem, "CDCW_crude_death_rate", dir = name)
+
+message("w demographics models done")
+
+name2 = "drive_vsurf_wo_dem"
+drug = rf_model(dat_wo_dem, predictors_wo_dem, "CDCW_DRUG_DTH_RATE", dir = name2)
+birth = rf_model(dat_wo_dem, predictors_wo_dem, "CHR_PCT_LOW_BIRTH_WT", dir = name2)
+injury = rf_model(dat_wo_dem, predictors_wo_dem, "CDCW_INJURY_DTH_RATE", dir = name2)
+self_harm = rf_model(dat_wo_dem, predictors_wo_dem, "CDCW_SELFHARM_DTH_RATE", dir = name2)
+mort = rf_model(dat_wo_dem, predictors_wo_dem, "CDCW_crude_death_rate", dir = name2)
+

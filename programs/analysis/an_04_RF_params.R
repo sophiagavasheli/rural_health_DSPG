@@ -10,7 +10,7 @@ param_table <- function(dir) {
   
   files <- list.files(
     input_dir,
-    pattern = "_grf_results.RData",
+    pattern = ".RData",
     full.names = TRUE
   )
   
@@ -69,5 +69,7 @@ param_table <- function(dir) {
   write.csv(params_long, paste0(out_dir, "/model_params.csv"), row.names = F)
 }
 
-param_table("with_demographics_year_dummies")
-param_table("without_demographics_year_dummies")
+# param_table("with_demographics_year_dummies")
+# param_table("without_demographics_year_dummies")
+
+param_table("drive_vsurf")

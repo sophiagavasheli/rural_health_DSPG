@@ -78,7 +78,7 @@ analyze_rf <- function(dir, health_labels){
   
   files <- list.files(
     input_dir,
-    pattern = "_grf_results.RData",
+    pattern = ".RData",
     full.names = TRUE
   )
   
@@ -178,6 +178,11 @@ analyze_rf <- function(dir, health_labels){
 
   importance_all <- map_dfr(files, function(f){
     load(f)
+    # vsurf outputs are differently named
+    if (exists("imp")) {
+      importance_df <- imp
+      rm(imp)
+    }
     
     importance_df %>%
       mutate(outcome = unique(performance_summary$health_outcome))
@@ -423,6 +428,7 @@ analyze_rf <- function(dir, health_labels){
 
 
 #results <- analyze_rf("drive_time_model", w_drv_time)
+results2 <- analyze_rf("drive_vsurf", w_drv_time)
 
-results = analyze_rf("with_demographics_year_dummies", many_yrs)
-results2 = analyze_rf("without_demographics_year_dummies", many_yrs)
+# results = analyze_rf("with_demographics_year_dummies", many_yrs)
+# results2 = analyze_rf("without_demographics_year_dummies", many_yrs)
