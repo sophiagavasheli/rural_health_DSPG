@@ -53,7 +53,7 @@ w_drv_time <- tribble(
   "CDCW_crude_death_rate",            "Overall Mortality Rate"
 )
 
-analyze_rf <- function(dir, health_labels){
+analyze_rf <- function(dir, health_labels, save = FALSE){
   
   # directories
   input_dir <- paste0("data/output/", dir)
@@ -416,19 +416,20 @@ analyze_rf <- function(dir, health_labels){
   )
   
   
-  return(
-    list(
-      performance = performance,
-      importance = mean_importance,
-      predictions = predictions
-    )
-  )
-  
+  if(save) {
+    saveRDS(performance, paste0("shiny_dashboard/", dir, "_performance.rds"))
+    saveRDS(predictions, paste0("shiny_dashboard/", dir, "_predictions.rds"))
+    saveRDS(importance_all, paste0("shiny_dashboard/", dir, "_importance.rds"))
+  }
 } 
 
 
-#results <- analyze_rf("drive_time_model", w_drv_time)
-results2 <- analyze_rf("drive_vsurf", w_drv_time)
 
-# results = analyze_rf("with_demographics_year_dummies", many_yrs)
-# results2 = analyze_rf("without_demographics_year_dummies", many_yrs)
+analyze_rf("drive_grf_w_dem", w_drv_time)
+analyze_rf("drive_grf_wo_dem", w_drv_time)
+
+analyze_rf("drive_vsurf_w_dem", w_drv_time)
+analyze_rf("drive_vsurf_wo_dem", w_drv_time)
+
+analyze_rf("with_demographics_year_dummies", many_yrs, save = TRUE)
+analyze_rf("without_demographics_year_dummies", many_yrs, save = TRUE)
