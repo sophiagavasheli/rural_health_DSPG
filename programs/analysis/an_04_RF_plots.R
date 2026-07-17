@@ -258,105 +258,170 @@ analyze_rf <- function(dir, health_labels, save = FALSE){
     mutate(
       health_outcome = coalesce(label,health_outcome),
       residual = observed - predicted_full_model
+    )  %>% 
+    pivot_longer(
+      cols = c(predicted_full_model, predicted_selected_model),
+      names_to = "model",
+      values_to = "value"
+    )
+  
+  
+  # p_obs_full <- ggplot(
+  #   predictions,
+  #   aes(observed,predicted_full_model)
+  # ) +
+  #   geom_point(alpha=.3) +
+  #   geom_abline(
+  #     intercept=0,
+  #     slope=1, color = "maroon4"
+  #   ) +
+  #   facet_wrap(~health_outcome,scales="free") +
+  #   labs(
+  #     title="Observed vs Predicted: Full Model",
+  #     x="Observed",
+  #     y="Predicted"
+  #   ) +
+  #   theme_bw()
+  # 
+  # 
+  # save_plot(
+  #   p_obs_full,
+  #   "observed_vs_predicted_full.png"
+  # )
+  # 
+  # 
+  # 
+  # p_obs_selected <- ggplot(
+  #   predictions,
+  #   aes(observed,predicted_selected_model)
+  # ) +
+  #   geom_point(alpha=.3) +
+  #   geom_abline(
+  #     intercept=0,
+  #     slope=1, color = "maroon4"
+  #   ) +
+  #   facet_wrap(~health_outcome,scales="free") +
+  #   labs(
+  #     title="Observed vs Predicted: Selected Model",
+  #     x="Observed",
+  #     y="Predicted"
+  #   ) +
+  #   theme_bw()
+  # 
+  # 
+  # save_plot(
+  #   p_obs_selected,
+  #   "observed_vs_predicted_selected.png"
+  # )
+    
+    
+    p_obs <- ggplot(
+      predictions,
+      aes(x= observed, y=value, color=model)
+    ) +
+      geom_point(alpha=.3) +
+      geom_abline(
+        intercept=0,
+        slope=1, color = "black"
+      ) +
+      facet_wrap(~health_outcome,scales="free") +
+      labs(
+        title="Observed vs Predicted Values",
+        x="Observed",
+        y="Predicted"
+      ) +
+    scale_color_manual(
+      name = "Model",
+      values = c(
+        predicted_full_model = "maroon4",
+        predicted_selected_model = "orange2"
+      ),
+      breaks = c("predicted_full_model", "predicted_selected_model"),
+      labels = c("Full Model", "Selected Model")
+      ) +
+      theme_bw()
+
+
+    save_plot(
+      p_obs,
+      "observed_vs_predicted.png", 12, 8
     )
   
   
   
-  p_obs_full <- ggplot(
-    predictions,
-    aes(observed,predicted_full_model)
-  ) +
-    geom_point(alpha=.3) +
-    geom_abline(
-      intercept=0,
-      slope=1, color = "maroon4"
+  # p_res_full <- ggplot(
+  #   predictions,
+  #   aes(predicted_full_model,residual)
+  # ) +
+  #   geom_point(alpha=.3) +
+  #   geom_hline(yintercept=0, color = "maroon4") +
+  #   facet_wrap(~health_outcome,scales="free") +
+  #   labs(
+  #     title="Residuals vs Predicted: Full Model",
+  #     x="Predicted",
+  #     y="Residual"
+  #   ) +
+  #   theme_bw()
+  # 
+  # 
+  # save_plot(
+  #   p_res_full,
+  #   "residuals_vs_predicted_full.png"
+  # )
+  # 
+  # 
+  # 
+  # p_res_selected <- ggplot(
+  #   predictions,
+  #   aes(predicted_selected_model,residual)
+  # ) +
+  #   geom_point(alpha=.3) +
+  #   geom_hline(yintercept=0, color = "maroon4") +
+  #   facet_wrap(~health_outcome,scales="free") +
+  #   labs(
+  #     title="Residuals vs Predicted: Selected Model",
+  #     x="Predicted",
+  #     y="Residual"
+  #   ) +
+  #   theme_bw()
+  # 
+  # 
+  # save_plot(
+  #   p_res_selected,
+  #   "residuals_vs_predicted_selected.png"
+  # )
+  
+    p_res <- ggplot(
+      predictions,
+      aes(x= value, y = residual, color = model)
     ) +
-    facet_wrap(~health_outcome,scales="free") +
-    labs(
-      title="Observed vs Predicted: Full Model",
-      x="Observed",
-      y="Predicted"
-    ) +
-    theme_bw()
-  
-  
-  save_plot(
-    p_obs_full,
-    "observed_vs_predicted_full.png"
-  )
-  
-  
-  
-  p_obs_selected <- ggplot(
-    predictions,
-    aes(observed,predicted_selected_model)
-  ) +
-    geom_point(alpha=.3) +
-    geom_abline(
-      intercept=0,
-      slope=1, color = "maroon4"
-    ) +
-    facet_wrap(~health_outcome,scales="free") +
-    labs(
-      title="Observed vs Predicted: Selected Model",
-      x="Observed",
-      y="Predicted"
-    ) +
-    theme_bw()
-  
-  
-  save_plot(
-    p_obs_selected,
-    "observed_vs_predicted_selected.png"
-  )
-  
-  
-  
-  p_res_full <- ggplot(
-    predictions,
-    aes(predicted_full_model,residual)
-  ) +
-    geom_point(alpha=.3) +
-    geom_hline(yintercept=0, color = "maroon4") +
-    facet_wrap(~health_outcome,scales="free") +
-    labs(
-      title="Residuals vs Predicted: Full Model",
-      x="Predicted",
-      y="Residual"
-    ) +
-    theme_bw()
-  
-  
-  save_plot(
-    p_res_full,
-    "residuals_vs_predicted_full.png"
-  )
-  
-  
-  
-  p_res_selected <- ggplot(
-    predictions,
-    aes(predicted_selected_model,residual)
-  ) +
-    geom_point(alpha=.3) +
-    geom_hline(yintercept=0, color = "maroon4") +
-    facet_wrap(~health_outcome,scales="free") +
-    labs(
-      title="Residuals vs Predicted: Selected Model",
-      x="Predicted",
-      y="Residual"
-    ) +
-    theme_bw()
-  
-  
-  save_plot(
-    p_res_selected,
-    "residuals_vs_predicted_selected.png"
-  )
+      geom_point(alpha=.3) +
+      geom_hline(yintercept=0, color = "black") +
+      facet_wrap(~health_outcome,scales="free") +
+      labs(
+        title="Residuals vs Predicted Values",
+        x="Predicted",
+        y="Residual"
+      ) +
+      scale_color_manual(
+        name = "Model",
+        values = c(
+          predicted_full_model = "maroon4",
+          predicted_selected_model = "orange2"
+        ),
+        breaks = c("predicted_full_model", "predicted_selected_model"),
+        labels = c("Full Model", "Selected Model")
+        ) +
+      theme_bw()
+
+
+    save_plot(
+      p_res,
+      "residuals_vs_predicted.png",12, 8
+    )
   
 
   # Variable importance by health outcome
-
   importance_dir <- file.path(
     figure_dir,
     "variable_importance"
@@ -423,11 +488,11 @@ analyze_rf <- function(dir, health_labels, save = FALSE){
   }
 } 
 
-# analyze_rf("with_demographics_year_dummies", many_yrs, save = TRUE)
-# analyze_rf("without_demographics_year_dummies", many_yrs, save = TRUE)
-# 
-# analyze_rf("drive_grf_w_dem", w_drv_time)
-# analyze_rf("drive_grf_wo_dem", w_drv_time)
+analyze_rf("with_demographics_year_dummies", many_yrs)
+analyze_rf("without_demographics_year_dummies", many_yrs)
+
+analyze_rf("drive_grf_w_dem", w_drv_time)
+analyze_rf("drive_grf_wo_dem", w_drv_time)
 
 analyze_rf("drive_vsurf_w_dem", w_drv_time)
 analyze_rf("drive_vsurf_wo_dem", w_drv_time)
