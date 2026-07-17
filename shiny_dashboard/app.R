@@ -1395,23 +1395,23 @@ server <- function(input, output, session) {
 
 # data download -----------------------------------------------------------
 
-  output$download_data <- downloadHandler(
-    filename = function() {
-      "clean_ALL_data.csv"
-    },
-    content = function(file) {
-      file.copy("clean_ALL_data.csv", file)
-    }
-  )  
-  
-  output$download_codebook <- downloadHandler(
-    filename = function() {
-      "all_codebook.csv"
-    },
-    content = function(file) {
-      file.copy("all_codebook.csv", file)
-    }
-  )
+  # output$download_data <- downloadHandler(
+  #   filename = function() {
+  #     "clean_ALL_data.csv"
+  #   },
+  #   content = function(file) {
+  #     file.copy("clean_ALL_data.csv", file)
+  #   }
+  # )  
+  # 
+  # output$download_codebook <- downloadHandler(
+  #   filename = function() {
+  #     "all_codebook.csv"
+  #   },
+  #   content = function(file) {
+  #     file.copy("all_codebook.csv", file)
+  #   }
+  # )
   
   
 } #end server
