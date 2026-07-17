@@ -491,9 +491,9 @@ analyze_rf <- function(dir, health_labels, save = FALSE){
 # analyze_rf("with_demographics_year_dummies", many_yrs)
 # analyze_rf("without_demographics_year_dummies", many_yrs)
 
-analyze_rf("drive_grf_w_dem", w_drv_time)
-analyze_rf("drive_grf_wo_dem", w_drv_time)
+analyze_rf("one_yr_grf_w_dem_drive", w_drv_time)
+analyze_rf("one_yr_grf_wo_dem_drive", w_drv_time)
 
-# analyze_rf("drive_vsurf_w_dem", w_drv_time)
-# analyze_rf("drive_vsurf_wo_dem", w_drv_time)
+analyze_rf("one_yr_vsurf_w_dem_drive", w_drv_time)
+analyze_rf("one_yr_vsurf_wo_dem_drive", w_drv_time)
 

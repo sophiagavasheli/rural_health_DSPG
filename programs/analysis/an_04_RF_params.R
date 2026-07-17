@@ -72,8 +72,8 @@ param_table <- function(dir) {
 # param_table("with_demographics_year_dummies")
 # param_table("without_demographics_year_dummies")
 
-param_table("drive_grf_w_dem")
-param_table("drive_grf_wo_dem")
+param_table("one_yr_grf_w_dem_drive")
+param_table("one_yr_grf_wo_dem_drive")
 
-# param_table("drive_vsurf_w_dem")
-# param_table("drive_vsurf_wo_dem")
+param_table("one_yr_vsurf_w_dem_drive")
+param_table("one_yr_vsurf_wo_dem_drive")

@@ -203,7 +203,7 @@ rf_model <- function(clean, predictors, outcome, num_trees = 2000, tune_setting 
 
 
 # run models
-name = "drive_vsurf_w_dem"
+name = "one_yr_vsurf_w_dem_drive"
 drug = rf_model(dat_w_dem, predictors_dem, "CDCW_DRUG_DTH_RATE", dir = name)
 birth = rf_model(dat_w_dem, predictors_dem, "CHR_PCT_LOW_BIRTH_WT", dir = name)
 injury = rf_model(dat_w_dem, predictors_dem, "CDCW_INJURY_DTH_RATE", dir = name)
@@ -212,7 +212,7 @@ mort = rf_model(dat_w_dem, predictors_dem, "CDCW_crude_death_rate", dir = name)
 
 message("w demographics models done")
 
-name2 = "drive_vsurf_wo_dem"
+name2 = "one_yr_vsurf_wo_dem_drive"
 drug = rf_model(dat_wo_dem, predictors_wo_dem, "CDCW_DRUG_DTH_RATE", dir = name2)
 birth = rf_model(dat_wo_dem, predictors_wo_dem, "CHR_PCT_LOW_BIRTH_WT", dir = name2)
 injury = rf_model(dat_wo_dem, predictors_wo_dem, "CDCW_INJURY_DTH_RATE", dir = name2)
