@@ -423,13 +423,12 @@ analyze_rf <- function(dir, health_labels, save = FALSE){
   }
 } 
 
-
-
-analyze_rf("drive_grf_w_dem", w_drv_time)
-analyze_rf("drive_grf_wo_dem", w_drv_time)
+# analyze_rf("with_demographics_year_dummies", many_yrs, save = TRUE)
+# analyze_rf("without_demographics_year_dummies", many_yrs, save = TRUE)
+# 
+# analyze_rf("drive_grf_w_dem", w_drv_time)
+# analyze_rf("drive_grf_wo_dem", w_drv_time)
 
 analyze_rf("drive_vsurf_w_dem", w_drv_time)
 analyze_rf("drive_vsurf_wo_dem", w_drv_time)
 
-analyze_rf("with_demographics_year_dummies", many_yrs, save = TRUE)
-analyze_rf("without_demographics_year_dummies", many_yrs, save = TRUE)
