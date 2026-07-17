@@ -2,12 +2,13 @@
 # libraries ---------------------------------------------------------------
 library(shiny)
 library(leaflet)
-library(tigris)
 library(sf)
 library(dplyr)
-library(viridis)
 library(bslib)
+library(viridis)
+library(RColorBrewer)
 
+#options(shiny.trace = TRUE) #debug
 
 # data loading -------------------------------------------------------
 
@@ -17,16 +18,17 @@ avail_dash_dat <- readRDS("dashboard_data.rds")
 years <- 2009:2023
 
 ## health and infrastructure map
-health = readRDS("health_map_data.rds") %>% st_transform(4326)
-infra = readRDS("infrastructure_map_data.rds") %>% st_transform(4326)
+county_geom <- readRDS("county_geometry.rds")  
+year_lookup <- readRDS("year_lookup.rds")
+health = readRDS("health_map_data.rds")        
+infra  = readRDS("infrastructure_map_data.rds") 
 
 health_choices = readRDS("health_vars.rds")
 infra_choices = readRDS("infrastructure_vars.rds")
 
 ## drive time map
 drive_times = readRDS("health_site_drive_times_2023.rds")
-us_counties = readRDS("us_counties_2020.rds")
-states_sf <- states(year = 2023, class = "sf") %>% st_transform(4326)
+states_sf <- readRDS("states_2023.rds")
 
 drive_time_choices <- c(
   "Acute Care Hospital" = "acute_care_hospital",
@@ -278,7 +280,7 @@ tabPanel(
   "))),
     
     h1("Data Availability Dashboard"),
-    p("Select the domain, years, level of availability for each year, and average county coverage to view variables. Please be patient as it takes a second to load. Check out the Data Sources page to download the data and learn about the sources."),
+    p("Select the domain, years, level of availability for each year, and average county coverage to view variables. Please be patient as it takes a second to load. Check out the Data Sources page to learn more about the sources."),
     
     # year slider
     fluidRow(
@@ -366,12 +368,12 @@ tabPanel(
     tags$p(
       "The following sources were used to construct the dataset presented in the Data Availability Dashboard. Please see the ",
       tags$a(href = "https://github.com/sophiagavasheli/rural_health_DSPG", "GitHub", target = "_blank"),
-      " for more specific details on how the data was collected. You can download a CSV version of the data and the codebook here:"
+      " for more specific details on how the data was collected."
     ),
     
-           downloadButton("download_data", "Download Data"),
-
-           downloadButton("download_codebook", "Download Codebook"),
+      # not enough RAM to support download
+      # downloadButton("download_data", "Download Data"),
+      # downloadButton("download_codebook", "Download Codebook"),
 
     
     hr(),
@@ -620,7 +622,7 @@ tabPanel(
         style = "background-color: white; border: 1px solid #d8e2dc; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 16px;",
         
         layout_column_wrap(
-          width = "250px", # Allows wrapping on smaller screens, fits 3 side-by-side on desktop
+          width = "250px", 
           
           selectInput(
             "year",
@@ -684,16 +686,15 @@ tabPanel(
                 sidebarPanel(
 
                   # filter bar
-                  selectizeInput(
+                  
+                  checkboxGroupInput(
                     "type_filter",
                     "Health site type:",
-                    choices = c("All", 
-                                sort(unique(health_sites$health_site_label))),
-                    selected = "All",
-                    multiple = TRUE
-                  ),
+                    choices = c(sort(unique(health_sites$health_site_label))),
+                    selected = "Acute Care Hospital"      
+                    ),
                   
-                  p("Hospitals are sourced from the UNC Shep's Center and the other health sites are sourced from OSM. Please be aware that OSM sites are user generated and many sites might be missing on this map.")
+                  p("Hospitals are sourced from the UNC Sheps Center and the other health sites are sourced from OSM. Please be aware that OSM sites are user generated and many sites might be missing on this map.")
                 ),
                 
                 mainPanel(
@@ -749,9 +750,8 @@ tabPanel(
                )
                ),
         column(4,
-               p("Every county is divided into smaller census tracts. A centroid of a census tract is the geographic center of the tract while a population weighted centroid is the center of the tract based on where people live, so the centroids will be pulled to population dense areas."),
+               p("Every county is divided into smaller census tracts. A centroid of a census tract is the geographic center of the tract while a population weighted centroid is the center of the tract based on where people live, so the centroids will be pulled to population dense areas.")
                
-              
                )
             ), 
       
@@ -909,8 +909,15 @@ server <- function(input, output, session) {
            "Updating variables for this year...")
     )
     
-    dat <- health %>% filter(YEAR == input$year)
-    dat$value <- dat[[input$health_var]]
+    ty <- year_lookup %>% filter(YEAR == input$year) %>% pull(TIGER_YEAR)
+    
+    vals <- health %>% filter(YEAR == input$year)
+    vals$value <- vals[[input$health_var]]
+    vals <- vals %>% select(COUNTYFIPS, COUNTY, value)
+    
+    dat <- county_geom %>%
+      filter(TIGER_YEAR == ty) %>%
+      left_join(vals, by = c("GEOID" = "COUNTYFIPS"))
     
     validate(
       need(any(!is.na(dat$value)), "No data available for this variable in this year.")
@@ -927,8 +934,15 @@ server <- function(input, output, session) {
            "Updating variables for this year...")
     )
     
-    dat <- infra %>% filter(YEAR == input$year)
-    dat$value <- dat[[input$infra_var]]
+    ty <- year_lookup %>% filter(YEAR == input$year) %>% pull(TIGER_YEAR)
+    
+    vals <- infra %>% filter(YEAR == input$year)
+    vals$value <- vals[[input$infra_var]]
+    vals <- vals %>% select(COUNTYFIPS, COUNTY, value)
+    
+    dat <- county_geom %>%
+      filter(TIGER_YEAR == ty) %>%
+      left_join(vals, by = c("GEOID" = "COUNTYFIPS"))
     
     validate(
       need(any(!is.na(dat$value)), "No data available for this variable in this year.")
@@ -942,26 +956,25 @@ server <- function(input, output, session) {
     dat <- health_filt()
     
     pal <- colorNumeric(
-      palette = rev(RColorBrewer::brewer.pal(11, "RdYlGn")),
+      palette = rev(brewer.pal(11, "RdYlGn")),
       domain = dat$value,
       na.color = "gray90"
     )
     
     leaflet(dat) %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
-      fitBounds(lng1 = -125, lat1 = 24,lng2 = -66, lat2 = 50) %>% 
+      fitBounds(lng1 = -125, lat1 = 24, lng2 = -66, lat2 = 50) %>%
       
       addPolygons(
         fillColor = ~pal(value),
         fillOpacity = 0.7,
         color = "white",
         weight = 0.5,
-        label = ~paste0(
+        popup = ~paste0(
           "<b>County:</b> ", COUNTY, "<br>",
-          "Value: ",
+          "<b> Value :</b> ",
           round(value, 2)
-        )
-      ) %>%
+      )) %>%
       
       addPolygons(
         data = states_sf,
@@ -976,7 +989,6 @@ server <- function(input, output, session) {
         pal = pal,
         values = dat$value,
         title = "Value:")
-    
   })
   
   output$infra_map <- renderLeaflet({
@@ -991,19 +1003,18 @@ server <- function(input, output, session) {
     
     leaflet(dat) %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
-      fitBounds(lng1 = -125, lat1 = 24,lng2 = -66, lat2 = 50) %>% 
+      fitBounds(lng1 = -125, lat1 = 24, lng2 = -66, lat2 = 50) %>%
       
       addPolygons(
         fillColor = ~pal(value),
         fillOpacity = 0.7,
         color = "white",
         weight = 0.5,
-        label = ~paste0(
+        popup = ~paste0(
           "<b>County:</b> ", COUNTY, "<br>",
-          "Value: ",
+          "<b> Value  :</b> ",
           round(value, 2)
-        )
-      ) %>%
+      )) %>%
       
       addPolygons(
         data = states_sf,
@@ -1018,14 +1029,12 @@ server <- function(input, output, session) {
         pal = pal,
         values = dat$value,
         title = "Value:")
-    
   })
-  
   
   ## drive time map 
   drive_filt <- reactive({
     drive_times %>%
-      dplyr::filter(health_site_type == input$site_type)
+      filter(health_site_type == input$site_type)
   })
   
   output$drive_map <- renderLeaflet({
@@ -1051,7 +1060,7 @@ server <- function(input, output, session) {
         popup = ~paste0(
           "<b>County:</b> ", NAME, "<br>",
           "<b> Average Drive Time (min) :</b> ",
-          round(avg_drive_time_minutes, 1), " min"
+          round(avg_drive_time_minutes, 2), " min"
         )
       ) %>%
       
@@ -1074,23 +1083,19 @@ server <- function(input, output, session) {
   ## health site map
  
   health_site_pal <- colorFactor(
-    viridis::turbo(17),
+    turbo(17),
     health_sites$health_site_label
   )
   
   
   filtered_data <- reactive({
-    if ("All" %in% input$type_filter || length(input$type_filter) == 0) {
-      health_sites
-    } else {
       health_sites %>%
         filter(health_site_label %in% input$type_filter)
-    }
   })
   
   output$health_sites_map <- renderLeaflet({
     
-    health_site_df <- sf::st_transform(filtered_data(), 4326)
+    health_site_df <- st_transform(filtered_data(), 4326)
     
     leaflet(health_site_df) %>%
       addProviderTiles("CartoDB.Positron") %>%

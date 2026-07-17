@@ -325,8 +325,8 @@ hr {
 /* Hover */
 .nav-pills > li > a:hover,
 .nav-pills > li > a:focus {
-  background: #d8f3dc;
-  color: #1b4332;
+  background: #2d6a4f;
+  color: white;
   border-color: #40916c;
 }
 

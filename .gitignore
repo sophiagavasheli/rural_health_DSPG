@@ -9,7 +9,4 @@ shiny_dashboard/clean_ALL_data.csv
 *.osm.pbf
 data/outcome/OSM/OSM_states_2023
 data/output
-shiny_dashboard/infrastructure_map_data.rds
-shiny_dashboard/health_map_data.rds
-
 *.out
