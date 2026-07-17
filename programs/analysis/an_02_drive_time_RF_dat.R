@@ -66,7 +66,11 @@ rf_dat <- dat %>%
   filter(YEAR == 2023) %>% 
   filter(as.numeric(COUNTYFIPS) < 57000) %>% # filter out us territories
   filter(!COUNTYFIPS %in% remove_counties) %>% 
-  select(-YEAR)
+  select(-YEAR) %>% 
+  left_join(
+    drv_clean,
+    by = c("COUNTYFIPS" = "GEOID")
+  )
 
 # imputation
 imputed <- rf_dat %>%
