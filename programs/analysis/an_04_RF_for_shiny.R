@@ -37,6 +37,10 @@ var_lookup <- read.csv("reference/all_codebook.csv") %>%
     )
   )
 
+
+# update rurality label
+var_lookup$Variable.Label[11] = "Rurality Indicator"
+
 # health outcome labels
 many_yrs <- tribble(
   ~variable,                          ~label,
