@@ -29,6 +29,12 @@ var_lookup <- read.csv("reference/all_codebook.csv") %>%
       "mental_health_min_drive_time_minutes", "Minimum Drive Time to Mental Health Facility (min)",
       "pharmacy_min_drive_time_minutes", "Minimum Drive Time to Pharmacy (min)"
     )
+  ) %>% 
+  bind_rows(
+    tibble(
+      Variable.Name = paste0("YEAR", 2010:2023),
+      Variable.Label = paste0("Data Year (", 2010:2023, ")")    
+    )
   )
 
 # health outcome labels
@@ -51,7 +57,22 @@ w_drv_time <- tribble(
   "CDCW_crude_death_rate",            "Overall Mortality Rate"
 )
 
-export <- function(dir, health_labels, save = FALSE){
+# function to assign whether variable is infrastructure or not
+is_infra <- function(var) {
+  not_infra = c("ACS_MEDIAN_AGE", "ACS_PCT_AIAN", "ACS_PCT_ASIAN", "ACS_PCT_BLACK", 
+            "ACS_PCT_HISPANIC", "ACS_PCT_WHITE", 
+            "ACS_PCT_POSTHS_ED", "SAHIE_PCT_UNINSURED64", 
+            "USDA_rural_indicator_2013", paste0("YEAR", 2010:2023)
+            )
+  
+  ifelse(
+    grepl("drive_time_minutes", var),
+    "yes",
+    ifelse(var %in% not_infra, "no", "yes")
+  )
+}
+
+export <- function(dir, health_labels){
   
   # directories
   input_dir <- paste0("data/output/", dir)
@@ -107,10 +128,8 @@ export <- function(dir, health_labels, save = FALSE){
     left_join(
       var_lookup,
       by=c("variable"="Variable.Name")
-    ) %>%
-    mutate(
-      variable = coalesce(Variable.Label, variable)
-    )
+    ) %>% 
+    mutate(is_infrastructure = is_infra(variable))
   
   
   
