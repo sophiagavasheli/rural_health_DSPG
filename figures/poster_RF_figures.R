@@ -10,13 +10,14 @@ pal <- c(
   "#861F41",
   "maroon",  
   "#D96C1F", 
-  "goldenrod2",
+  "orange2",
   "#CA7594",
-  "#EDA369"
+  "#EDA369",
+  "goldenrod2"
 )
 
 
-save_plot <- function(plot, filename, width = 10, height = 7){
+save_plot <- function(plot, filename, width = 15, height = 15){
   ggsave(
     filename = file.path(outdir, filename),
     plot = plot,
@@ -41,25 +42,28 @@ p_rmse_mae <- perf %>%
   scale_fill_manual(
     name = "",
     values = c(
-      full_model_test = pal[1],
-      selected_model_test = pal[3]
+      full_model_test = pal[2],
+      selected_model_test = pal[4]
     ),
     breaks = c("full_model_test", "selected_model_test"),
     labels = c("Full Model", "Selected Model")
   ) +
   labs(
-    title="Mean Absolute Errors and Root Mean Squared Errors for Random Forest Models by Health Outcome",
     x="Statistic",
     y="Value") +
   theme_bw() +
   theme(
-    plot.title = element_text(hjust = 0.5),
     legend.position = "bottom",
     legend.direction = "horizontal",
-    legend.box = "horizontal"
+    legend.box = "horizontal",
+    strip.text = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    axis.title = element_text(color = "black", size = 26),
+    axis.text.x = element_text(color = "black", size = 20),
+    axis.text.y = element_text(color = "black", size = 20)
   )
 
-save_plot(p_rmse_mae, "rmse_mae.png")
+save_plot(p_rmse_mae, "rmse_mae.png", width = 16, height = 12)
 
 p_r2 <- perf %>% 
   filter(statistic == "R2") %>%
@@ -69,25 +73,27 @@ p_r2 <- perf %>%
     scale_fill_manual(
       name = "",
       values = c(
-        full_model_test = pal[1],
-        selected_model_test = pal[3]
+        full_model_test = pal[2],
+        selected_model_test = pal[4]
       ),
       breaks = c("full_model_test", "selected_model_test"),
       labels = c("Full Model", "Selected Model")
     ) +
     labs(
-      title="R2 Values for Random Forest Models by Health Outcome",
       x="Statistic",
       y="Value") +
     theme_bw() +
-    theme(
-      plot.title = element_text(hjust = 0.5),
-      legend.position = "bottom",
-      legend.direction = "horizontal",
-      legend.box = "horizontal"
-    )
-
-save_plot(p_r2, "r2.png")
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.box = "horizontal",
+    legend.text = element_text(size = 20),
+    strip.text = element_text(size = 20),
+    axis.title = element_text(color = "black", size = 26),
+    axis.text.x = element_text(color = "black", size = 20),
+    axis.text.y = element_text(color = "black", size = 20)
+  )
+save_plot(p_r2, "r2.png",width = 16, height = 12)
 
 plot_importance <- function(outcome_name, label){
   
@@ -117,16 +123,18 @@ plot_importance <- function(outcome_name, label){
       labels = \(x) stringr::str_wrap(x, width = 30)
     ) +
     labs(
-      title = paste0("Variable Importance in Predicting ", label),
       x = "Predictor Variable",
       y = "Variable Importance"
     ) +
     theme_bw() +
     theme(
-      plot.title = element_text(hjust = 0.5),
       legend.position = "bottom",
       legend.direction = "horizontal",
-      legend.box = "horizontal"
+      legend.box = "horizontal",
+      legend.text = element_text(size = 20),
+      axis.title = element_text(color = "black", size = 26),
+      axis.text.x = element_text(color = "black", size = 20),
+      axis.text.y = element_text(color = "black", size = 20)
     )
   
   
