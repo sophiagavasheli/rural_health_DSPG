@@ -3,8 +3,7 @@
 library(dplyr)
 library(ggplot2)
 library(purrr)
-
-outdir = "figures/poster_figs"
+library(stringr)
 
 pal <- c(
   "#861F41",
@@ -16,8 +15,9 @@ pal <- c(
   "goldenrod2"
 )
 
+outdir = "figures/poster_figs"
 
-save_plot <- function(plot, filename, width = 15, height = 15){
+save_plot <- function(plot, filename, width = 15, height = 12){
   ggsave(
     filename = file.path(outdir, filename),
     plot = plot,
@@ -28,7 +28,12 @@ save_plot <- function(plot, filename, width = 15, height = 15){
 }
 
 imp = readRDS("shiny_dashboard/many_year_grf_importance.rds") %>% 
-  filter(demographics == "yes")
+  filter(demographics == "yes") %>% 
+  mutate(
+    Variable.Label = Variable.Label %>%
+      str_remove("^Total number of\\s+") %>%
+      str_replace("^([a-z])", toupper)
+  )
 
 perf = readRDS("shiny_dashboard/many_year_grf_performance.rds") %>% 
   filter(demographics == "yes")
@@ -56,8 +61,8 @@ p_rmse_mae <- perf %>%
     legend.position = "bottom",
     legend.direction = "horizontal",
     legend.box = "horizontal",
-    strip.text = element_text(size = 20),
-    legend.text = element_text(size = 20),
+    strip.text = element_text(color = "black", size = 20),
+    legend.text = element_text(color = "black", size = 20),
     axis.title = element_text(color = "black", size = 26),
     axis.text.x = element_text(color = "black", size = 20),
     axis.text.y = element_text(color = "black", size = 20)
@@ -87,8 +92,8 @@ p_r2 <- perf %>%
     legend.position = "bottom",
     legend.direction = "horizontal",
     legend.box = "horizontal",
-    legend.text = element_text(size = 20),
-    strip.text = element_text(size = 20),
+    legend.text = element_text(color = "black", size = 20),
+    strip.text = element_text(color = "black", size = 20),
     axis.title = element_text(color = "black", size = 26),
     axis.text.x = element_text(color = "black", size = 20),
     axis.text.y = element_text(color = "black", size = 20)
@@ -131,7 +136,7 @@ plot_importance <- function(outcome_name, label){
       legend.position = "bottom",
       legend.direction = "horizontal",
       legend.box = "horizontal",
-      legend.text = element_text(size = 20),
+      legend.text = element_text(color = "black", size = 20),
       axis.title = element_text(color = "black", size = 26),
       axis.text.x = element_text(color = "black", size = 20),
       axis.text.y = element_text(color = "black", size = 20)
