@@ -10,7 +10,9 @@ pal <- c(
   "#861F41",
   "maroon",  
   "#D96C1F", 
-  "goldenrod2"  
+  "goldenrod2",
+  "#CA7594",
+  "#EDA369"
 )
 
 
@@ -24,41 +26,26 @@ save_plot <- function(plot, filename, width = 10, height = 7){
   )
 }
 
-imp = readRDS("shiny_dashboard/many_year_grf_importance.rds")
+imp = readRDS("shiny_dashboard/many_year_grf_importance.rds") %>% 
+  filter(demographics == "yes")
 
-perf = readRDS("shiny_dashboard/many_year_grf_performance.rds")
-#pred = readRDS("shiny_dashboard/many_year_grf_predictions.rds")
-
-perf = perf %>% 
-  mutate(model_demo = paste(model, demographics, sep = "_")) %>% 
-  mutate(
-    model_demo = factor(
-      model_demo,
-      levels = c(
-        "full_model_test_yes",
-        "selected_model_test_yes",
-        "full_model_test_no",
-        "selected_model_test_no"
-      )
-    )
-  )
+perf = readRDS("shiny_dashboard/many_year_grf_performance.rds") %>% 
+  filter(demographics == "yes")
 
 
 p_rmse_mae <- perf %>% 
   filter(statistic %in% c("RMSE","MAE")) %>%
-  ggplot(aes(x = statistic, y = value, fill = model_demo)) +
+  ggplot(aes(x = statistic, y = value, fill = model)) +
   geom_col(position="dodge") +
   facet_wrap(~health_outcome, scales = "free_y") +
   scale_fill_manual(
     name = "",
     values = c(
-      full_model_test_yes = pal[1],
-      selected_model_test_yes = pal[2],
-      full_model_test_no = pal[3],
-      selected_model_test_no = pal[4]
+      full_model_test = pal[1],
+      selected_model_test = pal[3]
     ),
-    breaks = c("full_model_test_yes", "selected_model_test_yes", "full_model_test_no", "selected_model_test_no"),
-    labels = c("Full Model with Demographics", "Selected Model with Demographics", "Full Model without Demographics", "Selected Model without Demographics")
+    breaks = c("full_model_test", "selected_model_test"),
+    labels = c("Full Model", "Selected Model")
   ) +
   labs(
     title="Mean Absolute Errors and Root Mean Squared Errors for Random Forest Models by Health Outcome",
@@ -76,19 +63,17 @@ save_plot(p_rmse_mae, "rmse_mae.png")
 
 p_r2 <- perf %>% 
   filter(statistic == "R2") %>%
-    ggplot(aes(x = statistic, y = value, fill = model_demo)) +
+    ggplot(aes(x = statistic, y = value, fill = model)) +
     geom_col(position="dodge") +
     facet_wrap(~health_outcome, scales = "free_y") +
     scale_fill_manual(
       name = "",
       values = c(
-        full_model_test_yes = pal[1],
-        selected_model_test_yes = pal[2],
-        full_model_test_no = pal[3],
-        selected_model_test_no = pal[4]
+        full_model_test = pal[1],
+        selected_model_test = pal[3]
       ),
-      breaks = c("full_model_test_yes", "selected_model_test_yes", "full_model_test_no", "selected_model_test_no"),
-      labels = c("Full Model with Demographics", "Selected Model with Demographics", "Full Model without Demographics", "Selected Model without Demographics")
+      breaks = c("full_model_test", "selected_model_test"),
+      labels = c("Full Model", "Selected Model")
     ) +
     labs(
       title="R2 Values for Random Forest Models by Health Outcome",
@@ -108,66 +93,46 @@ plot_importance <- function(outcome_name, label){
   
   p_dem <- imp %>%
     filter(outcome == outcome_name) %>%
-    filter(demographics == "yes") %>% 
     arrange(desc(importance)) %>%
     slice_max(importance, n = 10) %>%
     ggplot(
       aes(
-        x = reorder(variable, importance),
-        y = importance
+        x = reorder(Variable.Label, importance),
+        y = importance,
+        fill = is_infrastructure
       )
     ) +
-    geom_col(fill = pal[1]) +
+    geom_col() +
+    scale_fill_manual(
+      name = "",
+      values = c(
+        yes = pal[5],
+        no = pal[6]
+      ),
+      breaks = c("yes", "no"),
+      labels = c("Infrastructure Variable", "Non-infrastructure Variable")
+    ) +
     coord_flip() +
     scale_x_discrete(
       labels = \(x) stringr::str_wrap(x, width = 30)
     ) +
     labs(
-      title = paste0("Variable Importance in Predicting ", label, ", Demographics Included"),
+      title = paste0("Variable Importance in Predicting ", label),
       x = "Predictor Variable",
       y = "Variable Importance"
     ) +
     theme_bw() +
     theme(
-      plot.title = element_text(hjust = 0.5)
+      plot.title = element_text(hjust = 0.5),
+      legend.position = "bottom",
+      legend.direction = "horizontal",
+      legend.box = "horizontal"
     )
   
   
   save_plot(
     p_dem,
     paste0(gsub(" ", "_", label), "_dem.png")
-  )
-  
-  p_no_dem <- imp %>%
-    filter(outcome == outcome_name) %>%
-    filter(demographics == "no") %>% 
-    arrange(desc(importance)) %>%
-    slice_max(importance, n = 10) %>%
-    ggplot(
-      aes(
-        x = reorder(variable, importance),
-        y = importance
-      )
-    ) +
-    geom_col(fill = pal[1]) +
-    coord_flip() +
-    scale_x_discrete(
-      labels = \(x) stringr::str_wrap(x, width = 30)
-    ) +
-    labs(
-      title = paste0("Variable Importance in Predicting ", label, ", Demographics Excluded"),
-      x = "Predictor Variable",
-      y = "Variable Importance"
-    ) +
-    theme_bw() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-  
-  
-  save_plot(
-    p_no_dem,
-    paste0(gsub(" ", "_", label), "_no_dem.png")
   )
   
 }
