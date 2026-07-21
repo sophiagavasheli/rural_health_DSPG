@@ -173,7 +173,7 @@ export <- function(dir, health_labels, name){
   
   
   
-  saveRDS(performance, paste0("shiny_dashboard/", name, "_performance.rds"))
+  saveRDS(perf_long, paste0("shiny_dashboard/", name, "_performance.rds"))
   saveRDS(importance_all, paste0("shiny_dashboard/", name, "_importance.rds"))
   saveRDS(predictions, paste0("shiny_dashboard/", name, "_predictions.rds"))
 } 
