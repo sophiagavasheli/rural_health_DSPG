@@ -46,7 +46,7 @@ Scripts with an `a` or `b` in the name are dependent on each other. The `a` scri
 - Run the scripts according to their order: `clean` then `analysis`.
 - Some of the outcome data, especially the `osm.pbf` files, are too large to store on GitHub, so make sure to generate everything with the scripts.
 - Archived scripts and data were not used in the final dashboard, but can be useful to see the evolution of the project. They also show how to clean data from sources like ACS and CDC, which the CLH database pulls from. See the Data Availability Dashboard and Data Sources pages on the Shiny app to learn more.
-- A few of the shell scripts were run with `sbatch` on [VT Advanced Research Computing](https://www.docs.arc.vt.edu/index.html) resources due to the very large file sizes of OpenStreetMap data. Further details are in the scripts.
+- A few of the shell scripts were run with `sbatch` on [VT Advanced Research Computing](https://www.docs.arc.vt.edu/index.html) resources due to the large file sizes of OpenStreetMap data and long run times of the random forest models. Further details are in the scripts.
   - The directory paths in ARC scripts do not always correspond to the directory structure of this repo since I was working in my home directory. Copy data and scripts correctly if you want to regenerate the results.
 - To calculate drive times, I initially used Docker Desktop to run the local server to query the OSM roads. This script is archived since it was too slow locally. The final pipeline was completed using apptainer on ARC.
 
