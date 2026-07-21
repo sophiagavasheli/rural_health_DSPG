@@ -4,6 +4,7 @@ library(dplyr)
 library(purrr)
 library(tidyr)
 library(tibble)
+library(stringr)
 
 var_lookup <- read.csv("reference/all_codebook.csv") %>%
   select(Variable.Name, Variable.Label) %>%
@@ -76,7 +77,7 @@ is_infra <- function(var) {
   )
 }
 
-export <- function(dir, health_labels){
+export <- function(dir, health_labels, name){
   
   # directories
   input_dir <- paste0("data/output/", dir)
@@ -133,7 +134,11 @@ export <- function(dir, health_labels){
       var_lookup,
       by=c("variable"="Variable.Name")
     ) %>% 
-    mutate(is_infrastructure = is_infra(variable))
+    mutate(is_infrastructure = is_infra(variable)) %>% 
+    mutate(
+      Variable.Label = str_remove(Variable.Label , "^Total number of\\s+"),
+      Variable.Label = str_replace(Variable.Label, "^([a-z])", toupper)
+    )
   
   
   
@@ -168,50 +173,15 @@ export <- function(dir, health_labels){
   
   
   
-  list(
-    performance = perf_long,
-    importance = importance_all,
-    predictions = predictions
-  )
+  saveRDS(performance, paste0("shiny_dashboard/", name, "_performance.rds"))
+  saveRDS(importance_all, paste0("shiny_dashboard/", name, "_importance.rds"))
+  saveRDS(predictions, paste0("shiny_dashboard/", name, "_predictions.rds"))
 } 
 
-combine <- function(dir1, dir2, labs, name) {
-  res1 = export(dir1, labs)
-  res2 = export(dir2, labs)
-  
-  perf1 = res1$performance %>% 
-    mutate(demographics = "yes")
-  
-  imp1 = res1$importance %>% 
-    mutate(demographics = "yes")
-  
-  pred1 = res1$predictions %>% 
-    mutate(demographics = "yes")
-  
-  perf2 = res2$performance %>% 
-    mutate(demographics = "no")
-  
-  imp2 = res2$importance %>% 
-    mutate(demographics = "no")
-  
-  pred2 = res2$predictions %>% 
-    mutate(demographics = "no")
-  
-  performance = bind_rows(perf1, perf2)
-  importance = bind_rows(imp1, imp2)
-  predictions = bind_rows(pred1, pred2)
-  
-  saveRDS(performance, paste0("shiny_dashboard/", name, "_performance.rds"))
-  saveRDS(importance, paste0("shiny_dashboard/", name, "_importance.rds"))
-  saveRDS(predictions, paste0("shiny_dashboard/", name, "_predictions.rds"))
-  
-}
 
-combine("with_demographics_year_dummies", "without_demographics_year_dummies", 
-        many_yrs, "many_year_grf")
 
-combine("one_yr_grf_w_dem_drive","one_yr_grf_wo_dem_drive", 
-        w_drv_time, "one_year_grf")
+export("with_demographics_year_dummies", many_yrs, "many_year_grf")
 
-combine("one_yr_vsurf_w_dem_drive", "one_yr_vsurf_wo_dem_drive", 
-        w_drv_time, "one_year_vsurf")
+export("one_yr_grf_w_dem_drive", w_drv_time, "one_year_grf")
+
+export("one_yr_vsurf_w_dem_drive", w_drv_time, "one_year_vsurf")

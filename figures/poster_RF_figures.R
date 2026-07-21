@@ -27,16 +27,9 @@ save_plot <- function(plot, filename, width = 15, height = 12){
   )
 }
 
-imp = readRDS("shiny_dashboard/many_year_grf_importance.rds") %>% 
-  filter(demographics == "yes") %>% 
-  mutate(
-    Variable.Label = Variable.Label %>%
-      str_remove("^Total number of\\s+") %>%
-      str_replace("^([a-z])", toupper)
-  )
+imp = readRDS("shiny_dashboard/many_year_grf_importance.rds")
 
-perf = readRDS("shiny_dashboard/many_year_grf_performance.rds") %>% 
-  filter(demographics == "yes")
+perf = readRDS("shiny_dashboard/many_year_grf_performance.rds")
 
 
 p_rmse_mae <- perf %>% 
