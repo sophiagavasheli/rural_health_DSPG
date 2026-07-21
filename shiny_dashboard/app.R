@@ -7,8 +7,7 @@ library(dplyr)
 library(bslib)
 library(viridis)
 library(RColorBrewer)
-
-#options(shiny.trace = TRUE) #debug
+library(ggplot2)
 
 # data loading -------------------------------------------------------
 
@@ -41,7 +40,26 @@ drive_time_choices <- c(
 
 ## health sites map
 health_sites = readRDS("us_health_sites_2023.rds")
-  
+
+## random forest plot data
+my_imp = readRDS("many_year_grf_importance.rds")
+my_perf = readRDS("many_year_grf_performance.rds")
+my_pred = readRDS("many_year_grf_predictions.rds")
+
+oy_imp = readRDS("one_year_grf_importance.rds")
+oy_perf = readRDS("one_year_grf_performance.rds")
+oy_pred = readRDS("one_year_grf_predictions.rds")
+
+vsurf_imp = readRDS("one_year_vsurf_importance.rds")
+vsurf_perf = readRDS("one_year_vsurf_performance.rds")
+vsurf_pred = readRDS("one_year_vsurf_predictions.rds")
+
+rf_pal <- c(
+  "#B9CBAE",
+  "#A8C5D9",  
+  "#4F772D",  
+  "#4682B4"
+)
 
 # UI ----------------------------------------------------------------------
 ui <- navbarPage("Rural Health and Infrastructure",
@@ -75,6 +93,19 @@ ui <- navbarPage("Rural Health and Infrastructure",
                   ),
                   
                   fluidRow(
+                    
+                    div(
+                      style = "display:flex; justify-content:center; align-items:center;",
+                      tags$a(
+                        href = "https://kohl.aaec.vt.edu/index.html",
+                        target = "_blank",
+                        img(
+                          src = "kohlcentre_logo.png",
+                          style = "width:200px; height:100px; object-fit:contain;"
+                        )
+                      )
+                    ),
+                    
                   div(
                     style = "display:flex; justify-content:center; align-items:center;",
                     tags$a(
@@ -82,18 +113,6 @@ ui <- navbarPage("Rural Health and Infrastructure",
                       target = "_blank",
                       img(
                         src = "ballad.png",
-                        style = "width:200px; height:100px; object-fit:contain;"
-                      )
-                    )
-                  ),
-                  
-                  div(
-                    style = "display:flex; justify-content:center; align-items:center;",
-                    tags$a(
-                      href = "https://kohl.aaec.vt.edu/index.html",
-                      target = "_blank",
-                      img(
-                        src = "kohlcentre_logo.png",
                         style = "width:200px; height:100px; object-fit:contain;"
                       )
                     )
@@ -711,36 +730,249 @@ tabPanel(
 # analysis ----------------------------------------------------------------
   navbarMenu("Analysis",
     tabPanel("Random Forest Models",
-        p("hello")     
-             
-    
-             
-             
-             
+       navset_card_pill(  
+         nav_panel("Introduction", 
+           
+          fluidRow(
+            
+            column(6,
+            h3("What are Random Forest Models?"),
+          
+           tags$ul(
+             tags$li("Random forests are a machine learning method that combines many decision trees to make accurate predictions."),
+             tags$li("Each tree is trained on a different random sample of the data and a random subset of predictor variables. The final prediction is the average of all trees, reducing overfitting and improving reliability."),
+             tags$li("Random forests can model complex, nonlinear relationships and interactions between variables."),
+             tags$li("The model provides variable importance scores, identifying which factors contribute most to prediction accuracy.")
+           )),
+          
+          column(6,
+                 br(),
+            div(
+            img(src = "rf.png",
+                height = "300px")
+            ),
+          p(tags$a(
+              "Image source",
+              href = "https://medium.com/@denizgunay/random-forest-af5bde5d7e1e",  
+              target = "_blank"
+            )
+          )
+          )
+          ),
+           
+           h3("Limitations"),
+          p("These models only determine which variables are important in predicting the outcome. They do not determine the causality between the predictors and outcome and do not determine directions in which the variables are correlated.")
+           
+         ),  
+         nav_panel("Many Year Model",
+           
+            h3("Setup"),
+            
+            tags$ol(
+              tags$li(
+                strong("Model data"),
+                tags$ul(
+                  tags$li("Predictors: health care infrastructure, transportation, broadband, rurality indicator, demographics (around 100 variables)"),
+                  tags$li("Outcomes: six health outcomes used (six models total)")
+                )
+              ),
+              
+              tags$li(
+                strong("Split the dataset into training and test sets"),
+                tags$ul(
+                  tags$li("70% of counties were assigned to the training set and 30% to the test set."),
+                  tags$li("Each county appeared in only one set to ensure the model was evaluated on unseen data.")
+                )
+              ),
+              
+              tags$li(
+                strong("Account for yearly trends"),
+                tags$ul(
+                  tags$li("The YEAR variable was converted into dummy (indicator) variables."),
+                  tags$li("Each year was represented by a value of 1 if an observation belonged to that year and 0 otherwise.")
+                )
+              ),
+              
+              tags$li(
+                strong("Train the full model"),
+                tags$ul(
+                  tags$li("An initial random forest model was fit using all available predictor variables using the grf package in R."),
+                  tags$li("The random forest model was trained using only the training data."),
+                  tags$li("The trained model then generated predictions for the test data to evaluate performance."),
+                  tags$li("The model also calculated an importance score for each predictor based on its contribution to prediction accuracy.")
+                )
+              ),
+              
+              tags$li(
+                strong("Train the selected model"),
+                tags$ul(
+                  tags$li("The top 10 most important predictors from the full model were used to train a second model."),
+                  tags$li("This simplified model was compared with the full model while highlighting the most influential variables.")
+                )
+              )
+            ),
+            
+            h3("Variable Importance"),
+            
+            fluidRow(
+              column(6, plotOutput("my_mental")),
+              column(6, plotOutput("my_lowbirth"))
+            ),
+            
+            fluidRow(
+              column(6, plotOutput("my_obesity")),
+              column(6, plotOutput("my_injury"))
+            ),
+            
+            fluidRow(
+              column(6, plotOutput("my_selfharm")),
+              column(6, plotOutput("my_stroke"))
+            ),
+            
+            h3("Model Performance"),
+            
+            fluidRow(
+              column(6, plotOutput("my_rmse")),
+              column(6, plotOutput("my_r2"))
+            ),
+            
+            fluidRow(
+              column(6, plotOutput("my_pred")),
+              column(6, plotOutput("my_res"))
+            )
+        
+         ),  
+         
+         nav_panel("One Year Model",
+                   h3("Setup"),
+                   
+                   tags$ol(
+                     tags$li(
+                       strong("Single-year model using 2023 data"),
+                       tags$ul(
+                         tags$li("Since we only calculated health site drive times for 2023, we decided to fit a one year model to include this data."),
+                         tags$li("Same model setup as the many-year model, using only 2023 data.")
+                       )
+                     ),
+                     
+                     
+                     tags$li(
+                       strong("Model data"),
+                       tags$ul(
+                         tags$li("Health outcomes included in the analysis varied slightly due to differences in available data."),
+                         tags$li("Around 90 predictor variables used based on data availability.")
+                       )
+                     )
+                   ),
+                   
+                   h3("Variable Importance"),
+                   
+                   fluidRow(
+                     column(6, plotOutput("oy_lowbirth")),
+                     column(6, plotOutput("oy_drug"))
+                   ),
+                   
+                   fluidRow(
+                     column(6, plotOutput("oy_injury")),
+                     column(6, plotOutput("oy_selfharm"))
+                   ),
+                   
+                   fluidRow(
+                     column(6, plotOutput("oy_mort"))
+                   ),
+                   
+                   h3("Model Performance"),
+                   
+                   fluidRow(
+                     column(6, plotOutput("oy_rmse")),
+                     column(6, plotOutput("oy_r2"))
+                   ),
+                   
+                   fluidRow(
+                     column(6, plotOutput("oy_pred")),
+                     column(6, plotOutput("oy_res"))
+                   )
+                   
+                   
+         ),  
+         
+         nav_panel("Feature Selection",
+                   h3("Setup"),
+                   
+                   tags$ol(
+                     tags$li(
+                       strong("VSURF: Variable Selection Using Random Forest"),
+                       tags$ul(
+                         tags$li("A variable selection method that uses random forests to identify important predictors."),
+                         tags$li("Helps select variables that are most useful for understanding relationships and improving prediction.")
+                       )
+                     ),
+                     
+                     tags$li(
+                       strong("Train the full model"),
+                       tags$ul(
+                         tags$li("A generalized random forest model using grf was trained with the 2023 data.")
+                       )
+                     ),
+                     
+                     tags$li(
+                       strong("Perform feature selection with VSURF()"),
+                       tags$ul(
+                         tags$li("VSURF() identified the variables that contributed most to model interpretation and prediction."),
+                         tags$li("Less informative variables were removed to create a smaller, more efficient predictor set.")
+                       )
+                     ),
+                     
+                     tags$li(
+                       strong("Train the selected model"),
+                       tags$ul(
+                         tags$li("A final model was fit with grf using only the predictors selected by VSURF()."),
+                         tags$li("This reduced model focused on the most important variables while maintaining predictive performance.")
+                       )
+                     )
+                   ),
+                   
+                   h3("Variable Importance"),
+                   
+                   fluidRow(
+                     column(6, plotOutput("vsurf_lowbirth")),
+                     column(6, plotOutput("vsurf_drug"))
+                   ),
+                   
+                   fluidRow(
+                     column(6, plotOutput("vsurf_injury")),
+                     column(6, plotOutput("vsurf_selfharm"))
+                   ),
+                   
+                   fluidRow(
+                     column(6, plotOutput("vsurf_mort"))
+                   ),
+                   
+                   h3("Model Performance"),
+                   
+                   fluidRow(
+                     column(6, plotOutput("vsurf_rmse")),
+                     column(6, plotOutput("vsurf_r2"))
+                   ),
+                   
+                   fluidRow(
+                     column(6, plotOutput("vsurf_pred")),
+                     column(6, plotOutput("vsurf_res"))
+                   )
+           
+                   
+                   
+           
+         ),  
+         
+         id = "tab2"       
+         )    
     ),
+    
     tabPanel("Drive Times",
       h1("Calculating the Drive Time to the Nearest Health Site"),
       p("Let's do an example of how the average drive time to the nearest acute hospital is calculated for Montgomery County, VA."),
-      # legend
-      tags$div(
-        class = "well",
-        style = "padding: 10px; max-width: 350px;",
-        
-        tags$h5(strong("Legend:")),
-        
-        tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
-                 tags$span(style = "background-color: #619E62; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
-                 "Acute hospitals"
-        ),
-        tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
-                 tags$span(style = "background-color: #4682B4; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
-                 "Tract-level population weighted centroids"
-        ),
-        tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
-                 tags$span(style = "background-color: #8B0000; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
-                 "Nearest hospitals"
-        )
-      ),
+      hr(),
       
       fluidRow(
         column(8,
@@ -750,7 +982,28 @@ tabPanel(
                )
                ),
         column(4,
-               p("Every county is divided into smaller census tracts. A centroid of a census tract is the geographic center of the tract while a population weighted centroid is the center of the tract based on where people live, so the centroids will be pulled to population dense areas.")
+               p("Every county is divided into smaller census tracts. A centroid of a census tract is the geographic center of the tract while a population weighted centroid is the center of the tract based on where people live, so the centroids will be pulled to population dense areas."),
+               
+               # legend
+               tags$div(
+                 class = "well",
+                 style = "padding: 10px; max-width: 350px;",
+                 
+                 tags$h5(strong("Legend:")),
+                 
+                 tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
+                          tags$span(style = "background-color: #619E62; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
+                          "Acute hospitals"
+                 ),
+                 tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
+                          tags$span(style = "background-color: #4682B4; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
+                          "Tract-level population weighted centroids"
+                 ),
+                 tags$div(style = "display: flex; align-items: center; margin-bottom: 5px;",
+                          tags$span(style = "background-color: #8B0000; width: 15px; height: 15px; display: inline-block; margin-right: 8px; border-radius: 3px;"),
+                          "Nearest hospitals"
+                 )
+               )
                
                )
             ), 
@@ -764,7 +1017,7 @@ tabPanel(
                )
         ),
         column(4,
-               p("Let's pick one centroid in Montgomery County and find the ten geographically closest hospitals. Among these ten hospitals, we can use the road network to estimate the drive time from the centroid to these ten hospitals. The nearest one will be the one with the lowest drive time.")
+               p("Let's pick one centroid in Montgomery County and find the ten geographically closest hospitals. Among these ten hospitals, we can use the road network from OpenStreetMap to estimate the drive time from the centroid to these ten hospitals. The nearest one will be the one with the lowest drive time.")
         )
         
       ),
@@ -782,7 +1035,12 @@ tabPanel(
                p("We do this for every centroid in the county and find its nearest hospital. Then we average all these drive times across the county to get a final average value, which you can see in the Drive Time Map!")
         )
         
-      )
+      ),
+      hr(),
+      
+    h3("Limitations"),
+    p("This method assumes that people will only seek care in their state of residence. It also doesn't take into account that people might travel further than the nearest health site to seek care based on quality, preference, insurance acceptance, hospital capacity, etc. OpenStreetMap data is user generated and so many health sites may be missing, causing an overestimation of the drive times. Finally, the county centroids are a good approximation but they don't accurately reflect the driving experience of everyone."),
+    br()
       
     )
   ), 
@@ -979,7 +1237,7 @@ server <- function(input, output, session) {
       addPolygons(
         data = states_sf,
         fill = FALSE,
-        color = "darkgray",
+        color = "#4C4C4C",
         weight = 1,
         opacity = 0.6
       ) %>%
@@ -1019,7 +1277,7 @@ server <- function(input, output, session) {
       addPolygons(
         data = states_sf,
         fill = FALSE,
-        color = "darkgray",
+        color = "#4C4C4C",
         weight = 1,
         opacity = 0.6
       ) %>%
@@ -1418,6 +1676,351 @@ server <- function(input, output, session) {
   #   }
   # )
   
+
+# random forest plots -----------------------------------------------------
+  
+  var_plot <- function(imp, outcome_name, text) {
+    
+    imp %>%
+      filter(outcome == outcome_name) %>%
+      slice_max(importance, n = 10) %>%
+      ggplot(
+        aes(
+          x = reorder(Variable.Label, importance),
+          y = importance,
+          fill = is_infrastructure,
+          text = paste(
+            "<b>", Variable.Label, "</b>",
+            "<br>Importance:", round(importance, 3)
+          )
+        )
+      ) +
+      geom_col() +
+      scale_fill_manual(
+        name = "",
+        values = c(
+          yes = rf_pal[1],
+          no = rf_pal[2]
+        ),
+        breaks = c("yes", "no"),
+        labels = c("Infrastructure Variable", "Non-infrastructure Variable")
+      ) +
+      coord_flip() +
+      scale_x_discrete(
+        labels = \(x) stringr::str_wrap(x, width = 30)
+      ) +
+      labs(
+        title = paste("Variable Importance in Predicting", text),
+        x = "Predictor Variable",
+        y = "Variable Importance"
+      ) +
+      theme_bw() +
+      theme(
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "horizontal",
+        legend.text = element_text(color = "black"),
+        axis.title = element_text(color = "black"),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black")
+      )
+  }
+  
+  rmse_plot <- function(perf) {
+    perf %>% 
+      filter(statistic %in% c("RMSE","MAE")) %>%
+      ggplot(aes(x = statistic, y = value, fill = model)) +
+      geom_col(position="dodge") +
+      facet_wrap(~health_outcome, scales = "free_y") +
+      scale_fill_manual(
+        name = "",
+        values = c(
+          full_model_test = rf_pal[3],
+          selected_model_test = rf_pal[4]
+        ),
+        breaks = c("full_model_test", "selected_model_test"),
+        labels = c("Full Model", "Selected Model")
+      ) +
+      labs(
+        title = "Mean Absolute Errors and Root Mean Squared Errors",
+        x="Statistic",
+        y="Value") +
+      theme_bw() +
+      theme(
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "horizontal",
+        strip.text = element_text(color = "black"),
+        legend.text = element_text(color = "black"),
+        axis.title = element_text(color = "black"),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black")
+      )
+  }
+  
+  r2_plot <- function(perf) {
+    perf %>% 
+      filter(statistic == "R2") %>%
+      ggplot(aes(x = statistic, y = value, fill = model)) +
+      geom_col(position="dodge") +
+      facet_wrap(~health_outcome, scales = "free_y") +
+      scale_fill_manual(
+        name = "",
+        values = c(
+          full_model_test = rf_pal[3],
+          selected_model_test = rf_pal[4]
+        ),
+        breaks = c("full_model_test", "selected_model_test"),
+        labels = c("Full Model", "Selected Model")
+      ) +
+      labs(
+        title = "R2 Values",
+        x="Statistic",
+        y="Value") +
+      theme_bw() +
+      theme(
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "horizontal",
+        legend.text = element_text(color = "black"),
+        strip.text = element_text(color = "black"),
+        axis.title = element_text(color = "black"),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black")
+      )
+  }
+  
+  res_plot <- function(pred) {
+    ggplot(
+      pred,
+      aes(x= value, y = residual, color = model)
+    ) +
+      geom_point(alpha=.3) +
+      geom_hline(yintercept=0, color = "black") +
+      facet_wrap(~health_outcome,scales="free") +
+      labs(
+        title="Residuals vs Predicted Values",
+        x="Predicted",
+        y="Residual"
+      ) +
+      scale_color_manual(
+        name = "",
+        values = c(
+          predicted_full_model = rf_pal[3],
+          predicted_selected_model = rf_pal[4]
+        ),
+        breaks = c("predicted_full_model", "predicted_selected_model"),
+        labels = c("Full Model", "Selected Model")
+      ) +
+      theme_bw()+
+      theme(
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "horizontal",
+        legend.text = element_text(color = "black"),
+        strip.text = element_text(color = "black"),
+        axis.title = element_text(color = "black"),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black")
+      )
+  }
+  
+  pred_plot <- function(pred) {
+    ggplot(
+      pred,
+      aes(x= observed, y=value, color=model)
+    ) +
+      geom_point(alpha=.3) +
+      geom_abline(
+        intercept=0,
+        slope=1, color = "black"
+      ) +
+      facet_wrap(~health_outcome,scales="free") +
+      labs(
+        title="Observed vs Predicted Values",
+        x="Observed",
+        y="Predicted"
+      ) +
+      scale_color_manual(
+        name = "",
+        values = c(
+          predicted_full_model = rf_pal[3],
+          predicted_selected_model = rf_pal[4]
+        ),
+        breaks = c("predicted_full_model", "predicted_selected_model"),
+        labels = c("Full Model", "Selected Model")
+      ) +
+      theme_bw()+
+      theme(
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "horizontal",
+        legend.text = element_text(color = "black"),
+        strip.text = element_text(color = "black"),
+        axis.title = element_text(color = "black"),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black")
+      )
+  }
+
+
+# many yr plots -----------------------------------------------------------
+
+  
+  output$my_mental <- renderPlot({
+   var_plot(my_imp, "CHR_PCT_MENTAL_DISTRESS", "Frequent Mental Distress Prevalence")
+    
+    
+    })
+  
+  output$my_lowbirth <- renderPlot({
+    var_plot(my_imp, "CHR_PCT_LOW_BIRTH_WT",  "Low Birth Weight Prevalence")
+    
+    
+  })
+  output$my_obesity <- renderPlot({
+    var_plot(my_imp, "CHR_PCT_ADULT_OBESITY", "Adult Obesity Prevalence")
+    
+    
+  })
+  output$my_injury <- renderPlot({
+    var_plot(my_imp, "CDCW_INJURY_DTH_RATE", "Injury Mortality Rate")
+    
+    
+  })
+  output$my_selfharm <- renderPlot({
+    var_plot(my_imp, "CDCW_SELFHARM_DTH_RATE", "Self-Harm Mortality Rate")
+    
+    
+  })
+  output$my_stroke <- renderPlot({
+    var_plot(my_imp, "CDCA_STROKE_DTH_RATE_ABOVE35", "Stroke Mortality Rate (Age 35+)")
+    
+    
+  })
+  
+  output$my_rmse <- renderPlot({
+     rmse_plot(my_perf)
+    
+  })
+  output$my_r2 <- renderPlot({
+     r2_plot(my_perf)
+    
+    
+  })
+  output$my_pred <- renderPlot({
+     pred_plot(my_pred)
+    
+    
+  })
+  
+  output$my_res <- renderPlot({
+     res_plot(my_pred)
+    
+    
+  })
+  
+
+# one yr plots ------------------------------------------------------------
+  
+  output$oy_lowbirth <- renderPlot({
+    var_plot(oy_imp, "CHR_PCT_LOW_BIRTH_WT",  "Low Birth Weight Prevalence")
+    
+    
+  })
+  output$oy_drug <- renderPlot({
+    var_plot(oy_imp, "CDCW_DRUG_DTH_RATE", "Drug Mortality Rate")
+    
+    
+  })
+  output$oy_injury <- renderPlot({
+    var_plot(oy_imp, "CDCW_INJURY_DTH_RATE", "Injury Mortality Rate")
+    
+    
+  })
+  output$oy_selfharm <- renderPlot({
+    var_plot(oy_imp, "CDCW_SELFHARM_DTH_RATE", "Self-Harm Mortality Rate")
+    
+    
+  })
+  output$oy_mort <- renderPlot({
+    var_plot(oy_imp, "CDCW_crude_death_rate", "Overall Mortality Rate")
+    
+    
+  })
+  
+  output$oy_rmse <- renderPlot({
+    rmse_plot(oy_perf)
+    
+  })
+  output$oy_r2 <- renderPlot({
+    r2_plot(oy_perf)
+    
+    
+  })
+  output$oy_pred <- renderPlot({
+    pred_plot(oy_pred)
+    
+    
+  })
+  
+  output$oy_res <- renderPlot({
+    res_plot(oy_pred)
+    
+    
+  })
+
+  
+
+# vsurf plots -------------------------------------------------------------
+  
+  output$vsurf_lowbirth <- renderPlot({
+    var_plot(vsurf_imp, "CHR_PCT_LOW_BIRTH_WT",  "Low Birth Weight Prevalence")
+    
+    
+  })
+  output$vsurf_drug <- renderPlot({
+    var_plot(vsurf_imp, "CDCW_DRUG_DTH_RATE", "Drug Mortality Rate")
+    
+    
+  })
+  output$vsurf_injury <- renderPlot({
+    var_plot(vsurf_imp, "CDCW_INJURY_DTH_RATE", "Injury Mortality Rate")
+    
+    
+  })
+  output$vsurf_selfharm <- renderPlot({
+    var_plot(vsurf_imp, "CDCW_SELFHARM_DTH_RATE", "Self-Harm Mortality Rate")
+    
+    
+  })
+  output$vsurf_mort <- renderPlot({
+    var_plot(vsurf_imp, "CDCW_crude_death_rate", "Overall Mortality Rate")
+    
+    
+  })
+  
+  output$vsurf_rmse <- renderPlot({
+    rmse_plot(vsurf_perf)
+    
+  })
+  output$vsurf_r2 <- renderPlot({
+    r2_plot(vsurf_perf)
+    
+    
+  })
+  output$vsurf_pred <- renderPlot({
+    pred_plot(vsurf_pred)
+    
+    
+  })
+  
+  output$vsurf_res <- renderPlot({
+    res_plot(vsurf_pred)
+    
+    
+  })
+    
   
 } #end server
   
