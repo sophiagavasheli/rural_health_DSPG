@@ -3,7 +3,8 @@
 
 #SBATCH -J osm # job name
 #SBATCH -N1
-#SBATCH --ntasks-per-node=128
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=32G
 #SBATCH --time=10:00:00
 #SBATCH -p normal_q
 #SBATCH -A dspg_viz # project
