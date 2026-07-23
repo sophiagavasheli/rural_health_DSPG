@@ -68,18 +68,17 @@ ui <- navbarPage("Rural Health and Infrastructure",
 # overview panel ----------------------------------------------------------
   tabPanel("Overview", 
            fluidPage(
-           h1("Exploring the Impacts of Infrastructure on Health Outcomes in the Rural US", align = "center"),
+           h1("Exploring the Role of Infrastructure on Health Outcomes in the Rural United States", align = "center"),
            h3("Data Science for the Public Good Program 2026", align="center"),
-           h4("Stakeholders: Ballad Health and the Kohl Centre", align="center"),
-           
+
            column(6,
                   h3("Project Overview"),
                   p("Health disparities between rural and urban communities remain a persistent challenge in the United States. Rural populations experience higher rates of chronic disease, mortality, and behavioral health conditions while facing greater barriers to accessing healthcare services. Although socioeconomic and environmental determinants of health have been extensively studied, the role of infrastructure—particularly broadband connectivity, transportation networks, and healthcare accessibility—has received comparatively less attention despite growing evidence that these factors significantly influence health outcomes. Infrastructure shapes the ability of individuals to obtain timely and effective healthcare. Broadband access enables telehealth services, appointment scheduling, and access to health information. Transportation infrastructure affects travel times to medical facilities and influences the ability to seek preventive and emergency care. Similarly, the geographic accessibility of healthcare facilities determines whether residents can obtain routine treatment, manage chronic conditions, and receive specialized services when needed. These challenges are particularly pronounced in rural communities, where geographic isolation, provider shortages, and infrastructure limitations often compound existing health disparities. "),
+                  
+                  h3("Stakeholders"),
                   p("The project is being conducted through the Data Science for the Public Good (DSPG) program at Virginia Tech in collaboration with Ballad Health, the Kohl Centre, and the Whole Health Consortium.")
-                  
-                  
-                  
                   ),
+           
            column(6,
                   h3("Research Question"),
                   p("What are the relationships between infrastructure variables such as broadband and healthcare facility access, and health outcome variables such as mortality rate and mental health in rural Virginia?"),
@@ -91,11 +90,18 @@ ui <- navbarPage("Rural Health and Infrastructure",
                     tags$li("Produce maps and visualizations illustrating geographic variation in infrastructure access and health outcomes across rural communities"),
                     tags$li("Predict health outcomes using infrastructure variables")
                   ),
+                  br(),
                   
                   fluidRow(
-                    
                     div(
-                      style = "display:flex; justify-content:center; align-items:center;",
+                      style = "
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 40px;
+      width: 100%;
+    ",
+                      
                       tags$a(
                         href = "https://kohl.aaec.vt.edu/index.html",
                         target = "_blank",
@@ -103,25 +109,26 @@ ui <- navbarPage("Rural Health and Infrastructure",
                           src = "kohlcentre_logo.png",
                           style = "width:200px; height:100px; object-fit:contain;"
                         )
-                      )
-                    ),
-                    
-                  div(
-                    style = "display:flex; justify-content:center; align-items:center;",
-                    tags$a(
-                      href = "https://www.balladhealth.org",
-                      target = "_blank",
-                      img(
-                        src = "ballad.png",
-                        style = "width:200px; height:100px; object-fit:contain;"
+                      ),
+                      
+                      tags$a(
+                        href = "https://www.balladhealth.org",
+                        target = "_blank",
+                        img(
+                          src = "ballad.png",
+                          style = "width:200px; height:100px; object-fit:contain;"
+                        )
                       )
                     )
                   )
-                  )
                   
-                  )
-      
-    )
+                ),
+           fluidRow(
+             column(
+               12,
+               hr()
+             )
+           )    )
   ),
   
 
@@ -386,7 +393,7 @@ tabPanel(
     h1("Primary Sources"),
     tags$p(
       "The following sources were used to construct the dataset presented in the Data Availability Dashboard. Please see the ",
-      tags$a(href = "https://github.com/sophiagavasheli/rural_health_DSPG", "GitHub", target = "_blank"),
+      tags$a(href = "https://github.com/VT-Data-Science-For-The-Public-Good/DSPG26_rural_health", "GitHub", target = "_blank"),
       " for more specific details on how the data was collected."
     ),
     
@@ -405,8 +412,8 @@ tabPanel(
         tags$a(
           "Agency for Healthcare Research and Quality",
           href = "https://www.ahrq.gov/data/innovations/clh-data.html",
-          target_ = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          target = "_blank",
+          class = "source-link"
         ),
         p('"AHRQ\'s database on Community-Level Health (CLH) was created under a project funded by the Patient Centered Outcomes Research (PCOR) Trust Fund. The purpose of this project is to create easy to use, linkable small-area data on health-related factors to use in PCOR research, inform approaches to address emerging health issues, and ultimately contribute to improved health outcomes." Our data availability dashboard is constructed mostly from the CLH data.',
           style = "font-size:14px; color:#333333; margin-top:5px;")
@@ -423,8 +430,8 @@ tabPanel(
         tags$a(
           "Federal Communications Commission",
           href = "https://www.fcc.gov/",
-          target_ = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          target = "_blank",
+          class = "source-link"
         ),
         p('"The Federal Communications Commission (FCC) regulates interstate and international communications by radio, television, wire, satellite, and cable in all 50 states, the District of Columbia and U.S. territories. A U.S. government agency overseen by Congress, the Commission is the federal agency responsible for implementing and enforcing America’s communications law & regulations." Using the FCC\'s Form 477, we were able to collect data on broadband adoption across counties.',
           style = "font-size:14px; color:#333333; margin-top:5px;")
@@ -442,7 +449,7 @@ tabPanel(
           "CDC WONDER",
           href = "https://wonder.cdc.gov/",
           target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          class = "source-link"
         ),
         p('"Wide-ranging ONline Data for Epidemiologic Research is an easy-to-use, menu-driven system that makes the information resources of the Centers for Disease Control and Prevention (CDC) available to public health professionals and the public at large. It provides access to a wide array of public health information." We downloaded overall mortality from WONDER.',
           style = "font-size:14px; color:#333333; margin-top:5px;")
@@ -459,7 +466,7 @@ tabPanel(
           "Appalachian Regional Commission (ARC)",
           href = "https://www.arc.gov/appalachian-counties-served-by-arc/",
           target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          class = "source-link"
         ),
         p(
           '"The Appalachian Regional Commission identifies counties within the Appalachian region to support economic development initiatives." We used their official county list for regional classification.',
@@ -480,7 +487,7 @@ tabPanel(
           "OpenStreetMap",
           href = "https://planet.osm.org/planet/full-history/",
           target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          class = "source-link"
         ),
         p(
           '"OpenStreetMap provides freely accessible map data of roads, buildings, and points of interest worldwide." We used the full-history planet file to extract road and health-related infrastructure data.',
@@ -499,7 +506,7 @@ tabPanel(
           "UNC Cecil G. Sheps Center",
           href = "https://www.shepscenter.unc.edu/programs-projects/rural-health/list-of-hospitals-in-the-u-s/",
           target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          class = "source-link"
         ),
         p('"The Sheps Center maintains national datasets on rural health and hospital locations in the United States." We downloaded their national hospital list.',
           style = "font-size:14px; color:#333333; margin-top:5px;"
@@ -518,7 +525,7 @@ tabPanel(
           "U.S. Census Bureau",
           href = "https://www.census.gov/geographies/reference-files/time-series/geo/centers-population.html",
           target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          class = "source-link"
         ),
         p(
           '"The Census Bureau\'s mission is to serve as the nation\'s leading provider of quality data about its people and economy." We downloaded the census tract population weighted centroids from here.',
@@ -541,7 +548,7 @@ tabPanel(
           "American Comunity Survey",
           href = "https://www.census.gov/programs-surveys/acs.html",
           target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          class = "source-link"
         ),
         p("\"The American Community Survey (ACS) is the premier source of detailed information about the nation's people and housing. As an ongoing survey conducted by the U.S. Census Bureau since 2005, the ACS collects detailed social, economic, housing, and demographic information from a sample of households across the 50 states, the District of Columbia, and Puerto Rico.\" ",
           style = "font-size:14px; color:#333333; margin-top:5px;")
@@ -559,7 +566,7 @@ tabPanel(
           "CDC PLACES",
           href = "https://www.cdc.gov/places/index.html",
           target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          class = "source-link"
         ),
         p('"PLACES provides health and health-related data using small area estimation for counties, incorporated and census designated places, census tracts, and ZIP Code Tabulation Areas (ZCTAs) across the United States. This project, which started in 2015, is a partnership between CDC, the Robert Wood Johnson Foundation, and the CDC Foundation." ',
           style = "font-size:14px; color:#333333; margin-top:5px;")
@@ -577,7 +584,7 @@ tabPanel(
           "Health Resources and Services Administration",
           href = "https://www.hrsa.gov/",
           target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          class = "source-link"
         ),
         p('"Established in 1980, HRSA is the primary federal agency responsible for ensuring access to health care services for people who are uninsured, isolated, or medically vulnerable, including those living with HIV/AIDS, mothers and children, and those living in rural areas." ',
           style = "font-size:14px; color:#333333; margin-top:5px;")
@@ -595,7 +602,7 @@ tabPanel(
           "USDA Rural Urban Continuum Codes",
           href = "https://www.ers.usda.gov/data-products/rural-urban-continuum-codes",
           target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          class = "source-link"
         ),
         p('"The 2023 Rural-Urban Continuum Codes distinguish U.S. metropolitan (metro) counties by the population size of their metro area, and nonmetropolitan (nonmetro) counties by their degree of urbanization and adjacency to a metro area. " ',
           style = "font-size:14px; color:#333333; margin-top:5px;")
@@ -613,7 +620,7 @@ tabPanel(
           "County Health Rankings",
           href = "https://www.countyhealthrankings.org/",
           target = "_blank",
-          style = "font-size:16px; font-weight:bold; text-decoration:underline; color:#007fa0;"
+          class = "source-link"
         ),
         p('"County Health Rankings & Roadmaps (CHR&R), a program of the University of Wisconsin Population Health Institute, draws attention to why there are differences in health within and across communities. The program highlights policies and practices that can help everyone be as healthy as possible. CHR&R aims to grow a shared understanding of health, equity and the power of communities to improve health for all. This work is rooted in a long-term vision where all people and places have what they need to thrive." ',
           style = "font-size:14px; color:#333333; margin-top:5px;")
@@ -813,6 +820,7 @@ tabPanel(
             ),
             
             h3("Variable Importance"),
+            p("Please wait for the graphs to load."),
             
             fluidRow(
               column(6, plotOutput("my_mental")),
@@ -1106,14 +1114,12 @@ tabPanel(
               height = "390px", 
               width = "700px") 
         ),
-        h4("2026 DSPG Cohort")
+        h4("2026 DSPG Cohort", align = "center")
     ),
     
     h2("About DSPG"),
     
-    p("The Data Science for the Public Good (DSPG) Young Scholars program is a summer immersive program held at the Virginia Tech Department of Agricultural and Applied Economics and the Virginia Cooperative Extension Service. The program engages students from across the country to work together on projects that address state, federal, and local government challenges around critical social issues relevant in the world today. DSPG young scholars conduct research at the intersection of statistics, computation, and the social sciences to determine how information generated within every community can be leveraged to improve quality of life and inform public policy."),
-    
-  hr()
+    p("The Data Science for the Public Good (DSPG) Young Scholars program is a summer immersive program held at the Virginia Tech Department of Agricultural and Applied Economics and the Virginia Cooperative Extension Service. The program engages students from across the country to work together on projects that address state, federal, and local government challenges around critical social issues relevant in the world today. DSPG young scholars conduct research at the intersection of statistics, computation, and the social sciences to determine how information generated within every community can be leveraged to improve quality of life and inform public policy.")
   
     )
   )
