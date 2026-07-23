@@ -29,7 +29,7 @@ conda activate osm
 BASE="/home/sophiag23/osm"
 PBF="${BASE}/history-latest.osm.pbf"
 POLY="${BASE}/us.poly"
-OUT= "${BASE}/health_sites"
+OUT="${BASE}/health_sites"
 mkdir -p $OUT
 
 for YEAR in {2019..2022}; do
