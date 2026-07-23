@@ -1,32 +1,31 @@
 #!/bin/bash
 
-# this script creates an osm.pbf file for each state from the entire us pbf file
-# run on VT ARC
+# this script creates an osm.pbf file for each state for a given year from the entire us pbf file. run on VT ARC
 
 #SBATCH -J states_osm # job name
 #SBATCH -N1
-#SBATCH --ntasks-per-node=1
-#SBATCH --time=05:00:00
+#SBATCH --ntasks-per-node=128
+#SBATCH --time=24:00:00
 #SBATCH --mem=32G
 #SBATCH -p normal_q
 #SBATCH -A dspg_viz # project
 #SBATCH --mail-user=sophiag23@vt.edu # enter desired email address for updates
-#SBATCH --mail-type=BEGIN # get emailed when job begins
-#SBATCH --mail-type=END   # get emailed when job ends
-#SBATCH --mail-type=FAIL  # get emailed if job fails
+#SBATCH --mail-type=BEGIN,END,FAIL
 
 set -euo pipefail
 
 source ~/miniconda3/bin/activate
 conda activate osm
 
-# Input PBF (download this first if you don't have it)
-BASE="/home/sophiag23/states"
+BASE="/home/sophiag23/osm"
 
-INPUT_PBF="${BASE}/usa_2023.osm.pbf"
+# this was first done for 2023 when I was still getting the pipeline to work
+# then I decided to use 2020 roads for multiple years of drive time data since the roads don't change much
+YEAR=2020
+INPUT_PBF="${BASE}/usa_${YEAR}.osm.pbf"
 
 # Output directory
-OUTDIR="${BASE}/states_osm"
+OUTDIR="${BASE}/OSM_states_${YEAR}"
 mkdir -p "$OUTDIR"
 
 # Base URL for Geofabrik poly files

@@ -4,13 +4,11 @@
 #SBATCH -J osm # job name
 #SBATCH -N1
 #SBATCH --ntasks-per-node=128
-#SBATCH --time=02:00:00
+#SBATCH --time=10:00:00
 #SBATCH -p normal_q
 #SBATCH -A dspg_viz # project
 #SBATCH --mail-user=sophiag23@vt.edu # enter desired email address for updates
-#SBATCH --mail-type=BEGIN # get emailed when job begins
-#SBATCH --mail-type=END   # get emailed when job ends
-#SBATCH --mail-type=FAIL  # get emailed if job fails
+#SBATCH --mail-type=BEGIN,END,FAIL
 
 
 # data retreived with
@@ -28,51 +26,81 @@ set -euo pipefail # prevent script from continuing if a command fails
 source ~/miniconda3/bin/activate
 conda activate osm
 
-BASE="/home/sophiag23/osm/"
+BASE="/home/sophiag23/osm"
 PBF="${BASE}/history-latest.osm.pbf"
 POLY="${BASE}/us.poly"
-TIME="${BASE}/history-2023.osm.pbf"
-FINAL="${BASE}/usa_2023.osm.pbf"
+OUT= "${BASE}/health_sites"
+mkdir -p $OUT
 
-# filtering up until 2023
-echo "filtering for 2023"
+for YEAR in {2019..2022}; do
 
-osmium time-filter "$PBF" 2023-01-01T00:00:00Z -o "$TIME"
+    echo "========================================"
+    echo "Processing ${YEAR}"
+    echo "========================================"
 
-# extract usa using poly file
-echo "extracting usa"
+    TIME="${BASE}/history-${YEAR}.osm.pbf"
+    FINAL="${BASE}/usa_${YEAR}.osm.pbf"
 
-osmium extract -p "$POLY" "$TIME" -o "$FINAL"
+    OUTPUT_PBF="${OUT}/us_health_${YEAR}.osm.pbf"
+    OUTPUT_GPKG="${OUT}/us_health_${YEAR}.gpkg"
+    OUTPUT_GEOJSON="${OUT}/us_health_${YEAR}_deduplicated.geojson"
 
+    
+    # Create snapshot for January 1 of the given year
+    echo "Filtering history to ${YEAR}..."
 
-# output files
-OUTPUT_PBF="${BASE}/us_health_2023.osm.pbf"
-OUTPUT_GPKG="${BASE}/us_health_2023.gpkg"
+    osmium time-filter \
+        "$PBF" \
+        "${YEAR}-01-01T00:00:00Z" \
+        -o "$TIME" \
+        --overwrite
 
-echo "Extracting healthcare features..."
+    
+    # Extract United States
+    echo "Extracting USA..."
 
-#extract health features
-osmium tags-filter \
-    "$FINAL" \
-    nwr/amenity=hospital \
-    nwr/amenity=clinic \
-    nwr/amenity=pharmacy \
-    nwr/amenity=doctors \
-    nwr/amenity=dentist \
-    nwr/amenity=nursing_home \
-    nwr/healthcare=* \
-    -o "$OUTPUT_PBF" \
-    --overwrite
+    osmium extract \
+        -p "$POLY" \
+        "$TIME" \
+        -o "$FINAL" \
+        --overwrite
 
-echo "Exporting to GeoPackage..."
+    
+    # Extract healthcare features
+    echo "Extracting healthcare features..."
 
-ogr2ogr \
-    -f GPKG \
-    "$OUTPUT_GPKG" \
-    "$OUTPUT_PBF"
+    osmium tags-filter \
+        "$FINAL" \
+        nwr/amenity=hospital \
+        nwr/amenity=clinic \
+        nwr/amenity=pharmacy \
+        nwr/amenity=doctors \
+        nwr/amenity=dentist \
+        nwr/amenity=nursing_home \
+        nwr/healthcare=* \
+        -o "$OUTPUT_PBF" \
+        --overwrite
 
-echo "deduplicating"
+    
+    # Convert to GeoPackage
+    echo "Exporting to GeoPackage..."
 
-python "${BASE}/cl_00b_OSM_health_sites_deduplicate.py" "$OUTPUT_GPKG" "${BASE}/us_health_2023_deduplicated.geojson"
+    ogr2ogr \
+        -f GPKG \
+        "$OUTPUT_GPKG" \
+        "$OUTPUT_PBF"
 
-echo "Done!"
+    
+    # Deduplicate
+    echo "Deduplicating..."
+
+    python "${BASE}/cl_00b_OSM_health_sites_deduplicate.py" \
+        "$OUTPUT_GPKG" \
+        "$OUTPUT_GEOJSON"
+
+    echo "Finished ${YEAR}"
+
+done
+
+echo "========================================"
+echo "All years completed!"
