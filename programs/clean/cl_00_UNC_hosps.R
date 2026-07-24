@@ -4,70 +4,74 @@ library(readxl)
 library(dplyr)
 library(sf)
 library(tidygeocoder)
-library(tigris)
+library(purrr)
 
-acute = read_excel("data/source/UNC_shep/Hospital-List2023.xlsx", sheet="ACUTE")
-
-spec = read_excel("data/source/UNC_shep/Hospital-List2023.xlsx", sheet="SPECIALTY")
-
-filt_acute = acute %>% 
-  select(ID, NAME, ADDRESS, CITY, STATE, ZIP, FIPS, `POS TOTAL BEDS`) %>% 
-  rename(pos_total_beds = `POS TOTAL BEDS`) %>% 
-  rename_with(tolower) %>% 
-  mutate(type = "acute")
-
-filt_spec = spec %>% 
-  select(ID, NAME, ADDRESS, CITY, STATE, ZIP, FIPS, `POS TOTAL BEDS`, TYPE) %>% 
-  rename(pos_total_beds = `POS TOTAL BEDS`) %>% 
-  rename_with(tolower) %>% 
-  mutate(type = case_when(
-    type == "LTACH" ~ "long term care",
-    type == "REHAB" ~ "rehabilitation",
-    type == "CHILD" ~ "children's",
-    type == "PSYCH" ~ "psychiatric",
-    type == "RELIGIOUS NON-MED" ~ "religious non med",
-    TRUE ~ type
-  ))
-
-#the two sheets don't have duplicated hospitals, check with
-# intersect(acute$NAME, spec$NAME)
-
-all = bind_rows(
-  filt_acute,
-  filt_spec
-)
-
-all_w_addy = all %>% 
-  mutate(location = paste0(address,', ', city,', ', state,', ', zip)) %>% 
-  # filter out us territories
-  filter(as.numeric(fips) < 57000)
-
-# geocode first with census then missing adresses with OSM
-geo <- all_w_addy %>%
-  geocode_combine(
-    queries = list(
-      list(method = "census"),
-      list(method = "osm"),
-      list(method = "arcgis")
-    ),
-    global_params = list(address = "location"),
-    cascade = TRUE
-  )
-
-#make sure nothing missing
-geo %>% filter(is.na(lat) | is.na(long)) 
-
-
-# preparing all data to calculate hospital drive times
-hosp_sf <- geo %>% st_as_sf(coords = c('long', 'lat'), crs = 4326)
+process_hospitals <- function(year) {
   
+  file <- paste0("data/source/UNC_shep/Hospital-List", year, ".xlsx")
+  
+  acute <- read_excel(file, sheet = "ACUTE")
+  
+  spec <- read_excel(file, sheet = "SPECIALTY")
+  
+  filt_acute <- acute %>%
+    select(ID, NAME, ADDRESS, CITY, STATE, ZIP, FIPS, `POS TOTAL BEDS`) %>%
+    rename(pos_total_beds = `POS TOTAL BEDS`) %>%
+    rename_with(tolower) %>%
+    mutate(
+      type = "acute",
+      year = year
+    )
+  
+  filt_spec <- spec %>%
+    select(ID, NAME, ADDRESS, CITY, STATE, ZIP, FIPS, `POS TOTAL BEDS`, TYPE) %>%
+    rename(pos_total_beds = `POS TOTAL BEDS`) %>%
+    rename_with(tolower) %>%
+    mutate(
+      type = case_when(
+        type == "LTACH" ~ "long term care",
+        type == "REHAB" ~ "rehabilitation",
+        type == "CHILD" ~ "children's",
+        type == "PSYCH" ~ "psychiatric",
+        type == "RELIGIOUS NON-MED" ~ "religious non med",
+        TRUE ~ type
+      ),
+      year = year
+    )
+  
+  all <- bind_rows(filt_acute, filt_spec)
+  
+  all_w_addy <- all %>%
+    mutate(location = paste(address, city, state, zip, sep = ", ")) %>%
+    filter(as.numeric(fips) < 57000)
+  
+  # Geocode
+  geo <- all_w_addy %>%
+    geocode_combine(
+      queries = list(
+        list(method = "census"),
+        list(method = "osm"),
+        list(method = "arcgis")
+      ),
+      global_params = list(address = "location"),
+      cascade = TRUE
+    )
+  
+  hosp_sf <- st_as_sf(geo, coords = c("long", "lat"), crs = 4326) 
+  
+  list(
+    all = hosp_sf,
+  )
+}
 
-# acute hospitals for analysis
-geo_acute = hosp_sf %>% 
-  filter(type == "acute") %>% 
-  rename(STUSPS = state) %>% 
-  mutate(COUNTYFP = sprintf("%03d", as.integer(substr(fips, 3, 5)))) %>% 
-  mutate(STATEFP = sprintf("%02d", as.integer(substr(fips, 1, 2))))
+years <- 2019:2023
 
-saveRDS(hosp_sf, "data/outcome/UNC_shep/clean_UNC_hosps_all_2023.rds")
-saveRDS(geo_acute, "data/outcome/UNC_shep/clean_UNC_hosps_acute_2023.rds")
+results <- map(years, process_hospitals)
+
+all_hospitals <- map(results, "all") %>%
+  bind_rows()
+
+saveRDS(
+  all_hospitals,
+  "data/outcome/UNC_shep/clean_UNC_hosps_all_2019_2023.rds"
+)

@@ -3,13 +3,11 @@
 #SBATCH --account=dspg_viz
 #SBATCH --partition=normal_q
 #SBATCH --array=0-50
-#SBATCH --time=04:00:00
+#SBATCH --time=20:00:00
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=4
 #SBATCH --mail-user=sophiag23@vt.edu # enter desired email address for updates
-#SBATCH --mail-type=BEGIN # get emailed when job begins
-#SBATCH --mail-type=END   # get emailed when job ends
-#SBATCH --mail-type=FAIL  # get emailed if job fails
+#SBATCH --mail-type=BEGIN, END, FAIL
 
 
 set -euo pipefail
@@ -31,9 +29,9 @@ cd "/home/sophiag23/drive_times"
   # q() to exit R and exit to end the job
 
 # MAKE SURE ALL THE DATA IS CORRECLY COPIED
-# osm.pbf files in "drive_times/data/OSM_states_2023", generated with cl_01_OSM_state_pbfs.sh
+# osm.pbf files in "drive_times/data/OSM_states_2020" (roads only exist for 2020, reused for every year)
 # counties in "drive_times/data/us_counties_2020.rds"
-# health sites in "data/drive_time_health_sites_2023.rds"
+# health sites (all years, with a `year` column) in "drive_times/data/clean_UNC_hosps_all_2019_2023.rds"
 # centroids "drive_times/data/clean_pop_centroids_2020.rds"
 
 mkdir -p results # data output will be here
@@ -48,19 +46,19 @@ STATES=(
   utah vermont virginia washington west-virginia wisconsin wyoming
 )
 
+YEARS=(2019 2020 2021 2022)
+# 2023 was run separately while I was still getting the pipeline to work
+
 STATE=${STATES[$SLURM_ARRAY_TASK_ID]}
 
 # Unique port per array task in case multiple tasks land on the same node
 export OSRM_PORT=$((5000 + SLURM_ARRAY_TASK_ID % 100))
 
-echo "Array task $SLURM_ARRAY_TASK_ID -> state: $STATE (OSRM port $OSRM_PORT)"
-
 module load apptainer
 module load R-bundle-CRAN/2025.11-foss-2025b
 
-Rscript an_00b_health_site_drive_times.R "$STATE"
-
-
-
-
-
+# Each array task handles ONE state, looping over all years sequentially.
+for YEAR in "${YEARS[@]}"; do
+  echo "Array task $SLURM_ARRAY_TASK_ID -> state: $STATE, year: $YEAR (OSRM port $OSRM_PORT)"
+  Rscript an_00b_health_site_drive_times2019_2022.R "$STATE" "$YEAR"
+done

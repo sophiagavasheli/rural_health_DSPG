@@ -1,5 +1,17 @@
-# Calculating the drive time to the nearest health site (of several types) for ONE state (2023 OSM roads)
-# this script is meant to be run by an_00_submit_drive_times.slurm
+# Calculating the drive time to the nearest health site (of several types) for ONE state, ONE year
+# this script is meant to be run by an_00a_submit_drive_times_multi_year.slurm
+#
+# MULTI-YEAR VERSION: takes both a state and a year on the command line.
+#   - Health site data lives in ONE combined dataset with a `year` column:
+#       data/drive_time_health_sites.rds
+#     and is filtered down to the requested year at runtime.
+#   - Road network (OSM) data only exists for 2020 and is reused for every
+#     health-site year being routed:
+#       data/OSM_states_2020/<state-full-name>.osm.pbf
+#     (extract/partition/customize therefore only needs to run once per state,
+#     regardless of how many years are processed for that state.)
+# Results are written per state/year/site-type, e.g.:
+#   results/<state_abb>_<year>_<site_type>_drive_times.rds
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -79,28 +91,46 @@ sites <- c(
   "pharmacy"
 )
 
-# 2. GET TARGET STATE FROM COMMAND LINE (SLURM ARRAY TASK)
+# 2. GET TARGET STATE AND YEAR FROM COMMAND LINE (SLURM ARRAY TASK)
 args <- commandArgs(trailingOnly = TRUE)
 
-if (length(args) < 1) {
-  stop("No state supplied.")
+if (length(args) < 2) {
+  stop("Usage: Rscript an_01_calculate_drive_times.R <state_full_name> <year>")
 }
 
 target_state_full_name <- tolower(args[1])
+target_year <- args[2]
 
 if (!target_state_full_name %in% state_lookup_all$state_full_name) {
   stop(paste0("'", target_state_full_name, "' is not a recognized state_full_name. ",
               "Check spelling (e.g. 'new-mexico', 'district-of-columbia').") )
 }
 
-message(paste("SLURM task received state:", target_state_full_name))
+if (!grepl("^[0-9]{4}$", target_year)) {
+  stop(paste0("'", target_year, "' is not a valid 4-digit year."))
+}
+
+message(paste("SLURM task received state:", target_state_full_name, "| year:", target_year))
 
 # 3. LOAD SOURCE DATASETS
 us_counties <- readRDS("data/us_counties_2020.rds") %>% st_as_sf()
 centers_sf  <- readRDS("data/clean_pop_centroids_2020.rds") %>% st_as_sf()
 
+health_sites_file <- "data/drive_time_health_sites.rds"
+if (!file.exists(health_sites_file)) {
+  stop(paste0("Health sites file not found: ", health_sites_file))
+}
+health_sites_all_years_sf <- readRDS(health_sites_file) %>% st_as_sf()
 
-health_sites_sf <- readRDS("data/drive_time_health_sites_2023.rds") %>% st_as_sf()
+if (!"year" %in% names(health_sites_all_years_sf)) {
+  stop("Expected a 'year' column in data/drive_time_health_sites.rds but none was found.")
+}
+
+health_sites_sf <- health_sites_all_years_sf %>% filter(year == as.integer(target_year))
+
+if (nrow(health_sites_sf) == 0) {
+  stop(paste0("No health sites found for year ", target_year, " in ", health_sites_file))
+}
 
 
 # HELPER: poll a local TCP port until something answers (or timeout)
@@ -125,14 +155,14 @@ wait_for_server <- function(port, timeout_sec = 90, poll_every = 3) {
 # HELPER: compute drive-time matrices + county summary for ONE site type,
 # reusing an already-running OSRM server. Saves its own results file.
 process_site_type <- function(site_type, state_sites_all, state_centers,
-                              state_counties, state_abb) {
+                              state_counties, state_abb, year) {
   
-  message(paste0("--- Routing to nearest: ", site_type, " ---"))
+  message(paste0("--- Routing to nearest: ", site_type, " (", year, ") ---"))
   
   state_sites <- state_sites_all %>% filter(health_site_type == site_type)
   
   if (nrow(state_sites) == 0) {
-    message(paste0("No '", site_type, "' sites found in this state. Skipping this type."))
+    message(paste0("No '", site_type, "' sites found in this state/year. Skipping this type."))
     return(invisible(NULL))
   }
   
@@ -162,7 +192,7 @@ process_site_type <- function(site_type, state_sites_all, state_centers,
         measure = c("duration", "distance")
       ),
       error = function(e) {
-        message("Failed tract ", t_id, " county ", c_id, " (", site_type, "): ", e$message)
+        message("Failed tract ", t_id, " county ", c_id, " (", site_type, ", ", year, "): ", e$message)
         NULL
       }
     )
@@ -184,7 +214,7 @@ process_site_type <- function(site_type, state_sites_all, state_centers,
   }
   
   if (length(all_tract_results) == 0) {
-    message(paste0("No routing matrices were generated for ", site_type, ". Skipping export."))
+    message(paste0("No routing matrices were generated for ", site_type, " (", year, "). Skipping export."))
     return(invisible(NULL))
   }
   
@@ -205,9 +235,9 @@ process_site_type <- function(site_type, state_sites_all, state_centers,
   
   final_dat <- state_counties %>%
     left_join(average_county_access, by = c("COUNTYFP" = "county_id")) %>%
-    mutate(health_site_type = site_type, .after = COUNTYFP)
+    mutate(health_site_type = site_type, year = year, .after = COUNTYFP)
   
-  out_file <- paste0("results/", state_abb, "_", site_type, "_drive_times.rds")
+  out_file <- paste0("results/", state_abb, "_", year, "_", site_type, "_drive_times.rds")
   dir.create("results", showWarnings = FALSE, recursive = TRUE)
   saveRDS(final_dat, out_file)
   
@@ -216,9 +246,9 @@ process_site_type <- function(site_type, state_sites_all, state_centers,
 }
 
 
-# MAIN PROCESSING FUNCTION FOR A SINGLE STATE (all site types)
+# MAIN PROCESSING FUNCTION FOR A SINGLE STATE + YEAR (all site types)
 
-process_state <- function(target_state_full_name) {
+process_state <- function(target_state_full_name, target_year) {
   
   state_lookup <- state_lookup_all %>% filter(state_full_name == target_state_full_name)
   
@@ -231,7 +261,7 @@ process_state <- function(target_state_full_name) {
   state_abb  <- tolower(state_lookup$state[1])
   state_full_name <- state_lookup$state_full_name[1]
   
-  message(paste0("=== Processing State: ", state_lookup$state_name[1], " (", toupper(state_abb), ") ==="))
+  message(paste0("=== Processing State: ", state_lookup$state_name[1], " (", toupper(state_abb), ") | Year: ", target_year, " ==="))
   
   # 4. SPATIAL FILTERING & PREPARATION
   state_counties <- us_counties %>% filter(STATEFP == state_fips)
@@ -242,7 +272,7 @@ process_state <- function(target_state_full_name) {
   state_centers <- centers_sf %>% filter(STATEFP == state_fips)
   
   if (nrow(state_sites_all) == 0 || nrow(state_centers) == 0) {
-    message("No health sites or census tracts found for this state. Skipping.")
+    message("No health sites or census tracts found for this state/year. Skipping.")
     return(invisible(NULL))
   }
   
@@ -252,13 +282,19 @@ process_state <- function(target_state_full_name) {
   present_site_types <- intersect(sites, unique(state_sites_all$health_site_type))
   missing_site_types <- setdiff(sites, present_site_types)
   if (length(missing_site_types) > 0) {
-    message("No sites of these types in this state: ", paste(missing_site_types, collapse = ", "))
+    message("No sites of these types in this state/year: ", paste(missing_site_types, collapse = ", "))
   }
   
   
-  # 5. INITIALIZE LOCAL OSRM SERVER VIA APPTAINER (once per state, reused across all site types)
+  # 5. INITIALIZE LOCAL OSRM SERVER VIA APPTAINER (once per state/year, reused across all site types)
+  # NOTE: road network extracts only exist for 2020 and are reused for every health-site
+  # year being routed (data/OSM_states_2020/<state-full-name>.osm.pbf).
   
-  data_dir <- ("data/OSM_states_2023")
+  data_dir <- "data/OSM_states_2020"
+  if (!dir.exists(data_dir)) {
+    message(paste0("OSM data directory not found: ", data_dir, ". Skipping state/year."))
+    return(invisible(NULL))
+  }
   data_dir_clean <- normalizePath(data_dir, winslash = "/", mustWork = TRUE)
   pbf_file <- paste0(state_full_name, ".osm.pbf")
   
@@ -273,16 +309,18 @@ process_state <- function(target_state_full_name) {
   
   log_dir <- ("logs")
   dir.create(log_dir, showWarnings = FALSE, recursive = TRUE)
-  log_file <- file.path(log_dir, paste0("osrm_", state_full_name, "_", Sys.getenv("SLURM_ARRAY_TASK_ID", "na"), ".log"))
-  pid_file <- file.path(log_dir, paste0("osrm_", state_full_name, "_", Sys.getenv("SLURM_ARRAY_TASK_ID", "na"), ".pid"))
+  task_id <- Sys.getenv("SLURM_ARRAY_TASK_ID", "na")
+  log_file <- file.path(log_dir, paste0("osrm_", state_full_name, "_", target_year, "_", task_id, ".log"))
+  pid_file <- file.path(log_dir, paste0("osrm_", state_full_name, "_", target_year, "_", task_id, ".pid"))
   
-  # Use existence of the .osrm.mldgr file as the marker that extract/partition/customize already completed for this state
+  # Use existence of the .osrm.mldgr file as the marker that extract/partition/customize
+  # already completed for this state/year combination
   mldgr_file <- file.path(data_dir_clean, paste0(state_full_name, ".osrm.mldgr"))
   
   apptainer_bind <- paste0("--bind ", data_dir_clean, ":/data")
   
   if (file.exists(mldgr_file)) {
-    message("Preprocessed OSRM data already exists for this state. Skipping extract/partition/customize.")
+    message("Preprocessed OSRM data already exists for this state/year. Skipping extract/partition/customize.")
   } else {
     message("No preprocessed OSRM data found. Running extract/partition/customize from scratch...")
     
@@ -308,12 +346,12 @@ process_state <- function(target_state_full_name) {
     ))
     
     if (!file.exists(mldgr_file)) {
-      message("osrm-customize did not produce the expected .osrm.mldgr file. Skipping state.")
+      message("osrm-customize did not produce the expected .osrm.mldgr file. Skipping state/year.")
       return(invisible(NULL))
     }
   }
   
-  message(paste("=== Step 4: Launching OSRM Server for", state_full_name, "on port", osrm_port, "==="))
+  message(paste("=== Step 4: Launching OSRM Server for", state_full_name, target_year, "on port", osrm_port, "==="))
   
   # Launch osrm-routed in the background, capture its PID, redirect output to a log file
   cmd_launch <- paste0(
@@ -328,7 +366,7 @@ process_state <- function(target_state_full_name) {
   server_up <- wait_for_server(port = as.integer(osrm_port), timeout_sec = 90)
   
   if (!server_up) {
-    message("OSRM server did not come up in time. Skipping state. See log: ")
+    message("OSRM server did not come up in time. Skipping state/year. See log: ")
     message(log_file)
     if (file.exists(pid_file)) {
       pid <- readLines(pid_file, warn = FALSE)[1]
@@ -347,7 +385,8 @@ process_state <- function(target_state_full_name) {
       state_sites_all = state_sites_all,
       state_centers   = state_centers,
       state_counties  = state_counties,
-      state_abb       = state_abb
+      state_abb       = state_abb,
+      year            = target_year
     )
   }
   
@@ -367,13 +406,13 @@ process_state <- function(target_state_full_name) {
 }
 
 
-# RUN FOR THE SINGLE STATE PASSED TO THIS ARRAY TASK
+# RUN FOR THE SINGLE STATE + YEAR PASSED TO THIS ARRAY TASK
 tryCatch(
-  process_state(target_state_full_name),
+  process_state(target_state_full_name, target_year),
   error = function(e) {
-    message(paste("ERROR processing", target_state_full_name, "-", e$message))
+    message(paste("ERROR processing", target_state_full_name, target_year, "-", e$message))
     quit(status = 1)  # non-zero exit so SLURM marks the array task as failed
   }
 )
 
-message(paste("=== Task complete for", target_state_full_name, "==="))
+message(paste("=== Task complete for", target_state_full_name, "|", target_year, "==="))
